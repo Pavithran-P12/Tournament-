@@ -1,0 +1,166 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>ThirdSpace Play Badminton Tournament</title>
+  <meta name="description" content="ThirdSpace Play Badminton Tournament, Sunday 25 October 2026 at Rapid Sports Academy, Perungudi, Chennai. Fixtures, live scores and results.">
+  <meta name="theme-color" content="#0E4A41">
+  <link rel="icon" href="assets/img/thirdspace-logo-96.png" type="image/png">
+  <link rel="apple-touch-icon" href="assets/img/apple-touch-icon.png">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Big+Shoulders+Display:wght@600;800;900&family=Caveat:wght@600;700&family=Figtree:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="assets/css/styles.css">
+</head>
+<body class="page-home">
+  <header class="site-header">
+    <a class="brand" href="index.html" aria-label="ThirdSpace Play home">
+      <img class="brand-logo" src="assets/img/thirdspace-logo-96.png" alt="" width="36" height="36">
+      <span>ThirdSpace <strong>Play</strong></span>
+    </a>
+    <nav class="site-nav" aria-label="Main">
+      <a href="index.html">Home</a>
+      <a href="matches.html">Matches <span class="live-count" data-live-count hidden></span></a>
+    </nav>
+  </header>
+
+  <main>
+    <section class="hero" aria-labelledby="hero-title">
+      <svg class="hero-court" viewBox="0 0 1340 610" preserveAspectRatio="xMidYMid slice" aria-hidden="true">
+        <g class="court-lines">
+          <rect x="2" y="2" width="1336" height="606" />
+          <line x1="2" y1="46" x2="1338" y2="46" />
+          <line x1="2" y1="564" x2="1338" y2="564" />
+          <line x1="78" y1="2" x2="78" y2="608" />
+          <line x1="1262" y1="2" x2="1262" y2="608" />
+          <line x1="472" y1="2" x2="472" y2="608" />
+          <line x1="868" y1="2" x2="868" y2="608" />
+          <line x1="2" y1="305" x2="472" y2="305" />
+          <line x1="868" y1="305" x2="1338" y2="305" />
+        </g>
+        <line class="court-net" x1="670" y1="-20" x2="670" y2="630" />
+      </svg>
+      <div class="hero-inner">
+        <div class="hero-copy">
+        <p class="presents"><img src="assets/img/thirdspace-logo-96.png" alt="" width="40" height="40">ThirdSpace by Losh presents</p>
+        <h1 id="hero-title" class="hero-title">ThirdSpace<br>Play</h1>
+        <p class="hero-kicker">Badminton Tournament</p>
+        <p class="slogan hero-slogan-mobile">Play. Meet. Belong.</p>
+        <p class="hero-lede">A one-day doubles badminton tournament for beginner and intermediate players. Four categories, league matches in the morning, finals in the afternoon.</p>
+        <dl class="hero-facts">
+          <div><dt>Date</dt><dd>Sunday 25 October 2026</dd></div>
+          <div><dt>Time</dt><dd>9:00 AM to 4:00 PM</dd></div>
+          <div><dt>Venue</dt><dd>Rapid Sports Academy, Perungudi, Chennai</dd></div>
+        </dl>
+        <div class="hero-actions">
+          <a class="btn btn-live" href="matches.html?status=live" data-hero-live>Watch live scores</a>
+          <a class="btn btn-ghost" href="matches.html">See all fixtures</a>
+        </div>
+        <p class="hero-status" data-day-status aria-live="polite"></p>
+        </div>
+        <figure class="hero-badge">
+          <img src="assets/img/thirdspace-logo.png" alt="ThirdSpace by Losh logo" width="384" height="384">
+          <figcaption class="slogan">Play. Meet. Belong.</figcaption>
+        </figure>
+      </div>
+    </section>
+
+    <section class="band band-court" aria-labelledby="live-title">
+      <div class="wrap">
+        <div class="section-head">
+          <h2 id="live-title">On court now</h2>
+          <a class="text-link" href="matches.html">Full schedule</a>
+        </div>
+        <div class="live-grid" data-live-grid></div>
+        <h3 class="sub-head">Coming up</h3>
+        <ol class="next-list" data-next-list></ol>
+      </div>
+    </section>
+
+    <section class="band band-paper" id="categories" aria-labelledby="cat-title">
+      <div class="wrap">
+        <div class="section-head">
+          <h2 id="cat-title">Categories</h2>
+        </div>
+        <div class="cat-grid" data-cat-grid></div>
+      </div>
+    </section>
+
+    <section class="band band-paper band-tight" aria-labelledby="format-title">
+      <div class="wrap format">
+        <div>
+          <h2 id="format-title">How the day runs</h2>
+          <p class="muted-ink">Teams are drawn into groups of four, with a few groups of three. Everyone plays everyone in their group, then the four group winners in each category play the semi-finals.</p>
+        </div>
+        <ol class="timeline" data-timeline></ol>
+        <div class="scoring-note">
+          <h3>Scoring</h3>
+          <p>Rally scoring, one game per match.</p>
+          <ul>
+            <li><strong>League:</strong> first to 15. At 14–14 a team must lead by 2, up to a maximum of 21.</li>
+            <li><strong>Semi-finals and finals:</strong> first to 21. At 20–20 a team must lead by 2, up to a maximum of 30.</li>
+            <li><strong>Group ranking:</strong> matches won, then head-to-head, then point difference, then points scored.</li>
+          </ul>
+        </div>
+      </div>
+    </section>
+
+    <section class="band band-court" aria-labelledby="inc-title">
+      <div class="wrap included">
+        <div>
+          <h2 id="inc-title">Entry</h2>
+          <p class="fee"><span class="fee-amount">₹599</span> early bird <span class="fee-sep">or</span> <span class="fee-amount">₹699</span> regular</p>
+          <p class="muted">Registration closes 22 October 2026. Spots are limited. Fixtures are shared with every team 24 hours before play.</p>
+        </div>
+        <ul class="inc-list" data-includes></ul>
+      </div>
+    </section>
+
+    <section class="band band-paper" id="rules" aria-labelledby="rules-title">
+      <div class="wrap rules">
+        <h2 id="rules-title">Tournament rules</h2>
+        <ol class="rules-list" data-rules></ol>
+      </div>
+    </section>
+
+    <section class="band band-court" id="venue" aria-labelledby="venue-title">
+      <div class="wrap venue">
+        <div>
+          <h2 id="venue-title">Venue</h2>
+          <p class="venue-name">Rapid Sports Academy</p>
+          <p class="muted">Perungudi, Chennai. The exact location is shared with registered teams. Please report 30 minutes before your match and bring non-marking shoes.</p>
+        </div>
+        <div class="venue-actions">
+          <a class="btn btn-ghost" href="https://www.instagram.com/thirdspace_by_losh/" target="_blank" rel="noopener">Message ThirdSpace on Instagram</a>
+        </div>
+      </div>
+    </section>
+
+    <section class="band band-paper organizer" aria-labelledby="org-title">
+      <div class="wrap org-grid">
+        <figure class="org-photo">
+          <img src="assets/img/loshini.jpg" alt="Loshini, founder of ThirdSpace by Losh" width="390" height="630">
+        </figure>
+        <div class="org-copy">
+          <h2 id="org-title">Game. People.<br>Good vibes.</h2>
+          <p class="org-hello"><span class="slogan">Hi, I'm Loshini</span></p>
+          <blockquote class="org-quote">I bring people together over food, stories, and moments that feel real.</blockquote>
+          <p class="muted-ink">ThirdSpace by Losh hosts community events in Chennai. ThirdSpace Play brings that to the badminton court: a tournament where first-timers and regular players meet, compete and leave with new friends.</p>
+          <a class="btn btn-dark" href="https://www.instagram.com/thirdspace_by_losh/" target="_blank" rel="noopener">Follow @thirdspace_by_losh</a>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <footer class="site-footer">
+    <div class="wrap">
+      <p class="sign-off">Rally. Compete. Connect.</p>
+      <p>Organised by ThirdSpace by Losh.</p>
+      <p class="muted">Scores on this site are entered courtside by tournament scorers. The referee's decision is final.</p>
+    </div>
+  </footer>
+
+  <script type="module" src="assets/js/home.js"></script>
+</body>
+</html>

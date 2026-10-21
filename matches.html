@@ -1,0 +1,77 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Matches | ThirdSpace Play</title>
+  <meta name="description" content="Fixtures, live scores, group tables and knockout bracket for the ThirdSpace Play Badminton Tournament.">
+  <meta name="theme-color" content="#0E4A41">
+  <link rel="icon" href="assets/img/thirdspace-logo-96.png" type="image/png">
+  <link rel="apple-touch-icon" href="assets/img/apple-touch-icon.png">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Big+Shoulders+Display:wght@600;800;900&family=Caveat:wght@600;700&family=Figtree:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="assets/css/styles.css">
+</head>
+<body class="page-matches">
+  <header class="site-header">
+    <a class="brand" href="index.html" aria-label="ThirdSpace Play home">
+      <img class="brand-logo" src="assets/img/thirdspace-logo-96.png" alt="" width="36" height="36">
+      <span>ThirdSpace <strong>Play</strong></span>
+    </a>
+    <nav class="site-nav" aria-label="Main">
+      <a href="index.html">Home</a>
+      <a href="matches.html">Matches <span class="live-count" data-live-count hidden></span></a>
+    </nav>
+  </header>
+
+  <main class="wrap mc">
+    <div class="mc-head">
+      <h1>Matches</h1>
+      <div class="progress" data-progress></div>
+    </div>
+
+    <div class="tabs cat-tabs" role="tablist" aria-label="Category" data-cat-tabs></div>
+    <div class="tabs view-tabs" role="tablist" aria-label="View" data-view-tabs>
+      <button type="button" role="tab" data-view="schedule">Schedule</button>
+      <button type="button" role="tab" data-view="groups">Groups</button>
+      <button type="button" role="tab" data-view="knockout">Knockout</button>
+    </div>
+
+    <div class="filters" data-filters>
+      <div class="chips" role="group" aria-label="Match status" data-status-chips>
+        <button type="button" data-status="all">All</button>
+        <button type="button" data-status="live">Live</button>
+        <button type="button" data-status="upcoming">Upcoming</button>
+        <button type="button" data-status="completed">Completed</button>
+      </div>
+      <label class="select">
+        <span>Court</span>
+        <select data-court><option value="all">All courts</option></select>
+      </label>
+      <label class="select">
+        <span>Round</span>
+        <select data-round>
+          <option value="all">All rounds</option>
+          <option value="1">League round 1</option>
+          <option value="2">League round 2</option>
+          <option value="3">League round 3</option>
+          <option value="semi">Semi-finals</option>
+          <option value="final">Finals</option>
+        </select>
+      </label>
+    </div>
+
+    <div data-view-body aria-live="polite"></div>
+  </main>
+
+  <footer class="site-footer">
+    <div class="wrap">
+      <p class="sign-off">Rally. Compete. Connect.</p>
+      <p>Organised by ThirdSpace by Losh.</p>
+    </div>
+  </footer>
+
+  <script type="module" src="assets/js/matches.js"></script>
+</body>
+</html>

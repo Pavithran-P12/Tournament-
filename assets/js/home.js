@@ -1,0 +1,61 @@
+import { EVENT } from './tournament-data.js';
+import { tournament, standings } from './engine.js';
+import { mountDemoBar, startLoop, onDemoChange, markActiveNav, paintLiveCount, fmtTime, esc, matchHref } from './ui.js';
+import { matchCard, emptyState } from './components.js';
+
+const $ = (s) => document.querySelector(s);
+const T = tournament();
+
+// Static content
+$('[data-rules]').innerHTML = EVENT.rules.map((r) => `<li>${esc(r)}</li>`).join('');
+$('[data-includes]').innerHTML = EVENT.includes.map((i) => `<li><strong>${esc(i.title)}</strong><span>${esc(i.detail)}</span></li>`).join('');
+const semis = T.matches.filter((m) => m.stage === 'semi');
+$('[data-timeline]').innerHTML = [
+  ['League matches', `${fmtTime(EVENT.dayStart)} to ${fmtTime(T.leagueEnd)}`, 'Every team plays each team in its group.'],
+  ['Semi-finals', `From ${fmtTime(Math.min(...semis.map((m) => m.start)))}`, 'Group A winner plays group C winner. Group B winner plays group D winner.'],
+  ['Finals', `From ${fmtTime(T.finalsStart)}`, 'Trophies for the winner and runner-up in each category.'],
+].map(([t, when, what]) => `<li><span class="tl-when">${when}</span><strong>${t}</strong><span>${what}</span></li>`).join('');
+
+mountDemoBar();
+markActiveNav();
+
+const refresh = startLoop((states, t) => {
+  paintLiveCount(states);
+  const all = Object.values(states);
+  const live = all.filter((s) => s.status === 'live').sort((a, b) => a.match.court - b.match.court);
+  const played = all.filter((s) => s.status === 'completed').length;
+
+  let status;
+  if (t < EVENT.dayStart) status = `First serve at ${fmtTime(EVENT.dayStart)}. ${all.length} matches across ${EVENT.courts} courts.`;
+  else if (played === all.length) status = 'All matches played. See the results for every category.';
+  else status = `${played} of ${all.length} matches played. ${live.length} on court now.`;
+  $('[data-day-status]').textContent = status;
+  const heroLive = $('[data-hero-live]');
+  heroLive.textContent = live.length ? `Watch ${live.length} live ${live.length === 1 ? 'match' : 'matches'}` : 'Watch live scores';
+
+  $('[data-live-grid]').innerHTML = live.length
+    ? live.map((s) => matchCard(s)).join('')
+    : emptyState(played === all.length ? 'Play has finished for the day.' : 'No matches on court right now.');
+
+  const upcoming = all.filter((s) => s.status === 'upcoming' || s.status === 'waiting').sort((a, b) => a.match.start - b.match.start || a.match.court - b.match.court).slice(0, 6);
+  $('[data-next-list]').innerHTML = upcoming.length
+    ? upcoming.map((s) => `<li><a href="${matchHref(s.match.id)}"><span class="nl-time">${fmtTime(s.match.start)}</span><span class="nl-court">Court ${s.match.court}</span><span class="nl-teams">${esc(s.a?.name ?? 'To be decided')} <span class="vs">v</span> ${esc(s.b?.name ?? 'To be decided')}</span></a></li>`).join('')
+    : '<li class="empty">Nothing left to schedule.</li>';
+
+  $('[data-cat-grid]').innerHTML = T.cats.map((c) => {
+    const teams = Object.values(c.teamsByGroup).flat().length;
+    const final = states[`${c.code}-F`];
+    const groupsDone = Object.keys(c.teamsByGroup).filter((g) => standings(c.code, g, states).complete).length;
+    let progress;
+    if (final.status === 'completed') progress = `<span class="cat-champ">Champions: ${esc(final.winnerTeam.name)}</span>`;
+    else if (final.status === 'live') progress = '<span class="cat-live">Final in progress</span>';
+    else progress = `<span>${groupsDone} of ${c.groups.length} groups complete</span>`;
+    return `<a class="cat-card" href="matches.html?cat=${c.code}">
+      <span class="cat-level cat-level-${c.level.toLowerCase()}">${c.level}</span>
+      <strong class="cat-name">${esc(c.name.replace(`${c.level} `, ''))}</strong>
+      <span class="cat-meta">${teams} teams in ${c.groups.length} groups</span>
+      <span class="cat-progress">${progress}</span>
+    </a>`;
+  }).join('');
+});
+onDemoChange(refresh);

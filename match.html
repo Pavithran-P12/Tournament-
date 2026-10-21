@@ -1,0 +1,111 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Match | ThirdSpace Play</title>
+  <meta name="description" content="Live scoreboard for a ThirdSpace Play Badminton Tournament match.">
+  <meta name="theme-color" content="#0E4A41">
+  <link rel="icon" href="assets/img/thirdspace-logo-96.png" type="image/png">
+  <link rel="apple-touch-icon" href="assets/img/apple-touch-icon.png">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Big+Shoulders+Display:wght@600;800;900&family=Caveat:wght@600;700&family=Figtree:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="assets/css/styles.css">
+</head>
+<body class="page-match">
+  <header class="site-header">
+    <a class="brand" href="index.html" aria-label="ThirdSpace Play home">
+      <img class="brand-logo" src="assets/img/thirdspace-logo-96.png" alt="" width="36" height="36">
+      <span>ThirdSpace <strong>Play</strong></span>
+    </a>
+    <nav class="site-nav" aria-label="Main">
+      <a href="index.html">Home</a>
+      <a href="matches.html">Matches <span class="live-count" data-live-count hidden></span></a>
+    </nav>
+  </header>
+
+  <main class="wrap match" data-match-root>
+    <a class="back" href="matches.html">All matches</a>
+
+    <div class="match-head">
+      <div>
+        <p class="match-cat" data-cat></p>
+        <h1 class="match-title" data-title></h1>
+        <p class="match-meta" data-meta></p>
+      </div>
+      <div data-status></div>
+    </div>
+
+    <div class="match-grid">
+      <div class="court-wrap">
+        <div class="court" data-court>
+          <svg class="court-svg" viewBox="0 0 610 1340" preserveAspectRatio="none" aria-hidden="true">
+            <rect x="2" y="2" width="606" height="1336" />
+            <line x1="46" y1="2" x2="46" y2="1338" />
+            <line x1="564" y1="2" x2="564" y2="1338" />
+            <line x1="2" y1="78" x2="608" y2="78" />
+            <line x1="2" y1="1262" x2="608" y2="1262" />
+            <line x1="2" y1="472" x2="608" y2="472" />
+            <line x1="2" y1="868" x2="608" y2="868" />
+            <line x1="305" y1="2" x2="305" y2="472" />
+            <line x1="305" y1="868" x2="305" y2="1338" />
+            <line class="net" x1="-10" y1="670" x2="620" y2="670" />
+          </svg>
+          <div class="half half-a" data-half="A">
+            <p class="half-team" data-team="A"></p>
+            <p class="half-score" data-score="A">0</p>
+          </div>
+          <div class="half half-b" data-half="B">
+            <p class="half-score" data-score="B">0</p>
+            <p class="half-team" data-team="B"></p>
+          </div>
+          <p class="net-chip" data-net-chip hidden></p>
+          <span class="shuttle-marker" data-shuttle hidden><img src="assets/img/shuttle.svg" alt=""><span class="sr-only" data-serve-text></span></span>
+        </div>
+        <p class="sr-only" aria-live="polite" data-announce></p>
+      </div>
+
+      <div class="match-side">
+        <section class="scorer" data-scorer hidden aria-labelledby="scorer-title">
+          <div class="scorer-head">
+            <h2 id="scorer-title">Scorer controls</h2>
+            <span class="pill pill-demo">Demo</span>
+          </div>
+          <p class="scorer-note">In the demo anyone can score. On the day, only the scorer assigned to this court can, and the server checks every point.</p>
+          <div class="point-buttons">
+            <button type="button" class="point-btn point-a" data-point="A"><span>Point to</span><strong data-btn-team="A"></strong></button>
+            <button type="button" class="point-btn point-b" data-point="B"><span>Point to</span><strong data-btn-team="B"></strong></button>
+          </div>
+          <div class="scorer-row">
+            <button type="button" class="btn btn-ghost" data-undo>Undo last point</button>
+            <button type="button" class="btn btn-text" data-reset>Clear demo scoring</button>
+          </div>
+          <div class="result-box" data-result hidden></div>
+        </section>
+
+        <button type="button" class="btn btn-live btn-block" data-scorer-toggle hidden>Score this match (demo)</button>
+
+        <section class="panel" aria-labelledby="sheet-title">
+          <h2 id="sheet-title">Score sheet</h2>
+          <div class="sheet" data-sheet tabindex="0" aria-label="Rally by rally score sheet"></div>
+        </section>
+
+        <section class="panel" aria-labelledby="info-title">
+          <h2 id="info-title">Match details</h2>
+          <dl class="details" data-details></dl>
+        </section>
+      </div>
+    </div>
+  </main>
+
+  <footer class="site-footer">
+    <div class="wrap">
+      <p class="sign-off">Rally. Compete. Connect.</p>
+      <p>Organised by ThirdSpace by Losh.</p>
+    </div>
+  </footer>
+
+  <script type="module" src="assets/js/match.js"></script>
+</body>
+</html>
