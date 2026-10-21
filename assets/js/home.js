@@ -1,7 +1,7 @@
-import { EVENT } from './tournament-data.js';
-import { tournament, standings } from './engine.js';
-import { mountDemoBar, startLoop, onDemoChange, markActiveNav, paintLiveCount, fmtTime, esc, matchHref } from './ui.js';
-import { matchCard, emptyState } from './components.js';
+import { EVENT } from './tournament-data.js?v=20261022g';
+import { tournament, standings } from './engine.js?v=20261022g';
+import { mountDrawNotice, startLoop, markActiveNav, paintLiveCount, fmtTime, esc, matchHref } from './ui.js?v=20261022g';
+import { matchCard, emptyState } from './components.js?v=20261022g';
 
 const $ = (s) => document.querySelector(s);
 const T = tournament();
@@ -16,19 +16,20 @@ $('[data-timeline]').innerHTML = [
   ['Finals', `From ${fmtTime(T.finalsStart)}`, 'Trophies for the winner and runner-up in each category.'],
 ].map(([t, when, what]) => `<li><span class="tl-when">${when}</span><strong>${t}</strong><span>${what}</span></li>`).join('');
 
-mountDemoBar();
+mountDrawNotice();
 markActiveNav();
 
-const refresh = startLoop((states, t) => {
+startLoop((states, clock) => {
   paintLiveCount(states);
   const all = Object.values(states);
   const live = all.filter((s) => s.status === 'live').sort((a, b) => a.match.court - b.match.court);
   const played = all.filter((s) => s.status === 'completed').length;
 
   let status;
-  if (t < EVENT.dayStart) status = `First serve at ${fmtTime(EVENT.dayStart)}. ${all.length} matches across ${EVENT.courts} courts.`;
-  else if (played === all.length) status = 'All matches played. See the results for every category.';
-  else status = `${played} of ${all.length} matches played. ${live.length} on court now.`;
+  if (played === all.length) status = 'All matches played. See the results for every category.';
+  else if (played || live.length) status = `${played} of ${all.length} matches played. ${live.length} on court now.`;
+  else if (clock.phase === 'before') status = `${all.length} matches across ${EVENT.courts} courts on Sunday 25 October. First serve at ${fmtTime(EVENT.dayStart)}.`;
+  else status = `First serve at ${fmtTime(EVENT.dayStart)}. ${all.length} matches across ${EVENT.courts} courts.`;
   $('[data-day-status]').textContent = status;
   const heroLive = $('[data-hero-live]');
   heroLive.textContent = live.length ? `Watch ${live.length} live ${live.length === 1 ? 'match' : 'matches'}` : 'Watch live scores';
@@ -58,4 +59,3 @@ const refresh = startLoop((states, t) => {
     </a>`;
   }).join('');
 });
-onDemoChange(refresh);

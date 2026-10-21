@@ -41,9 +41,9 @@ test('whole day fits between 9 AM and 4 PM', () => {
 });
 
 test('before the day nothing is played; after it every match has a winner', () => {
-  const before = snapshot(8 * 60);
+  const before = snapshot(8 * 60, {}, { simulate: true });
   assert.ok(Object.values(before).every((s) => s.status === 'upcoming'));
-  const after = snapshot(17 * 60);
+  const after = snapshot(17 * 60, {}, { simulate: true });
   for (const s of Object.values(after)) {
     assert.equal(s.status, 'completed', s.match.id);
     assert.ok(s.score.winner);
@@ -51,7 +51,7 @@ test('before the day nothing is played; after it every match has a winner', () =
 });
 
 test('semi-finals pair A1 v C1 and B1 v D1, and the final pairs the semi winners', () => {
-  const after = snapshot(17 * 60);
+  const after = snapshot(17 * 60, {}, { simulate: true });
   for (const code of ['BMD', 'BWD', 'IMD', 'IXD']) {
     const a1 = standings(code, 'A', after).rows[0].team.id;
     const c1 = standings(code, 'C', after).rows[0].team.id;
@@ -64,7 +64,7 @@ test('semi-finals pair A1 v C1 and B1 v D1, and the final pairs the semi winners
 });
 
 test('3-team groups work and their tables add up', () => {
-  const after = snapshot(17 * 60);
+  const after = snapshot(17 * 60, {}, { simulate: true });
   const t = standings('BWD', 'D', after);
   assert.equal(t.rows.length, 3);
   assert.equal(t.total, 3);
@@ -78,4 +78,17 @@ test('a scorer override takes priority over the simulation', () => {
   const s = snapshot(8 * 60, { [m.id]: ['A', 'A', 'B'] })[m.id];
   assert.equal(s.status, 'live');
   assert.equal(s.score.a, 2);
+});
+
+test('without simulation, unscored matches stay upcoming and scored ones count', () => {
+  const T = tournament();
+  const m = T.matches.find((x) => x.stage === 'league');
+  const win = Array(15).fill('A');
+  const s = snapshot(23 * 60, { [m.id]: { sides: win, confirmed: true } });
+  assert.equal(s[m.id].status, 'completed');
+  assert.equal(s[m.id].confirmed, true);
+  const others = Object.values(s).filter((x) => x.match.id !== m.id && x.match.stage === 'league');
+  assert.ok(others.every((x) => x.status === 'upcoming'));
+  const semis = Object.values(s).filter((x) => x.match.stage !== 'league');
+  assert.ok(semis.every((x) => x.status === 'waiting'));
 });

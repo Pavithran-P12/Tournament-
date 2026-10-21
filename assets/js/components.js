@@ -1,5 +1,5 @@
-import { esc, fmtTime, matchHref, stageLabel, statusPill, teamLabel } from './ui.js';
-import { category } from './engine.js';
+import { esc, fmtTime, matchHref, stageLabel, statusPill, teamLabel } from './ui.js?v=20261022g';
+import { category } from './engine.js?v=20261022g';
 
 /** Compact match card used on the home page and in the match center. */
 export function matchCard(st, { showCategory = true } = {}) {

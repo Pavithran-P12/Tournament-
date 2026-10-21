@@ -1,22 +1,25 @@
-import { EVENT } from './tournament-data.js';
-import { tournament, category } from './engine.js';
-import { describeFormat, replay } from './scoring.js';
+import { EVENT } from './tournament-data.js?v=20261022g';
+import { tournament, category } from './engine.js?v=20261022g';
+import { describeFormat, replay } from './scoring.js?v=20261022g';
 import {
-  mountDemoBar, startLoop, onDemoChange, markActiveNav, paintLiveCount, fmtTime, esc,
-  stageLabel, statusPill, teamLabel, scoringStore, saveScoring, currentStates,
-} from './ui.js';
+  mountDrawNotice, startLoop, markActiveNav, paintLiveCount, fmtTime, esc,
+  stageLabel, statusPill, teamLabel, recordFor, saveLocalScore, deleteScore,
+  isScorer, checkPasskey, lockScorer, downloadResults, pendingChanges, publishedInfo,
+} from './ui.js?v=20261022g';
 
 const $ = (s) => document.querySelector(s);
 const T = tournament();
-const id = new URLSearchParams(location.search).get('id');
+// Match code comes from ?id=…; #… is accepted too, because some local dev servers drop the query string.
+const id = new URLSearchParams(location.search).get('id') || decodeURIComponent(location.hash.slice(1)) || '';
 const m = T.byId[id];
 
-mountDemoBar();
+mountDrawNotice();
 markActiveNav();
+window.addEventListener('hashchange', () => location.reload());
 
 if (!m) {
   $('[data-match-root]').innerHTML = `<a class="back" href="matches.html">All matches</a>
-    <div class="not-found"><h1>Match not found</h1><p>There is no match with the code “${esc(id ?? '')}”. Open it from the match list instead.</p>
+    <div class="not-found"><h1>${id ? 'Match not found' : 'Choose a match'}</h1><p>${id ? `There is no match with the code “${esc(id)}”.` : 'No match was selected.'} Pick one from the match list.</p>
     <a class="btn btn-live" href="matches.html">Go to matches</a></div>`;
   startLoop(paintLiveCount);
 } else {
@@ -32,12 +35,9 @@ function init() {
   let scoring = false;
   let lockUntil = 0;
 
-  const record = () => scoringStore()[m.id];
-  const writeRecord = (rec) => {
-    const store = scoringStore();
-    if (rec) store[m.id] = rec; else delete store[m.id];
-    saveScoring(store);
-  };
+  const record = () => recordFor(m.id);
+  const writeRecord = (rec) => saveLocalScore(m.id, { events: rec.events, confirmed: !!rec.confirmed });
+  let deleteArmed = 0;
   const newId = () => (crypto.randomUUID ? crypto.randomUUID() : `${Date.now()}-${Math.random()}`);
 
   function render(states) {
@@ -136,11 +136,16 @@ function init() {
     $('[data-details]').innerHTML = rows.map(([k, v]) => `<div><dt>${k}</dt><dd>${esc(v)}</dd></div>`).join('');
   }
 
+  let askingPasskey = false;
+
   function renderScorer(st, nameA, nameB) {
     const rec = record();
-    const canScore = st.a && st.b;
+    const canScore = !!(st.a && st.b);
+    if (scoring && !isScorer()) scoring = false;
     const toggle = $('[data-scorer-toggle]');
-    toggle.hidden = scoring || !canScore || (st.status === 'completed' && !rec);
+    toggle.hidden = scoring || askingPasskey || !canScore;
+    toggle.textContent = st.status === 'completed' ? 'Correct this result' : 'Score this match';
+    $('[data-passkey]').hidden = !askingPasskey;
     const panel = $('[data-scorer]');
     panel.hidden = !scoring;
     document.body.classList.toggle('is-scoring', scoring);
@@ -148,39 +153,71 @@ function init() {
     $('[data-btn-team="A"]').textContent = nameA;
     $('[data-btn-team="B"]').textContent = nameB;
     const finished = !!st.score.winner;
-    const confirmed = rec?.confirmed;
+    const confirmed = !!rec?.confirmed;
     document.querySelectorAll('[data-point]').forEach((b) => { b.disabled = finished || Date.now() < lockUntil; });
     $('[data-undo]').disabled = confirmed || !st.score.rallies.length;
+    $('[data-delete]').textContent = Date.now() < deleteArmed ? 'Tap again to delete' : "Delete this match's scores";
     const result = $('[data-result]');
     result.hidden = !finished;
     if (finished) {
       const w = st.score.winner === 'A' ? nameA : nameB;
       const sc = st.score.winner === 'A' ? `${st.score.a}–${st.score.b}` : `${st.score.b}–${st.score.a}`;
       result.innerHTML = confirmed
-        ? `<p><strong>Result confirmed.</strong> ${esc(w)} won ${sc}.</p>`
+        ? `<p><strong>Result confirmed.</strong> ${esc(w)} won ${sc}.</p>
+           <button type="button" class="btn btn-text" data-reopen>Reopen to correct</button>`
         : `<p><strong>${esc(w)} win ${sc}.</strong> Check the score with the umpire, then confirm. If the last point was a mistake, undo it.</p>
            <button type="button" class="btn btn-live" data-confirm>Confirm result</button>`;
     }
+    const n = pendingChanges();
+    const pub = publishedInfo().updated;
+    $('[data-pending]').textContent = n
+      ? `${n} ${n === 1 ? 'match has' : 'matches have'} changes saved on this phone only. Download the results file and send it to the organizer to publish.`
+      : `Everything on this phone matches the published results${pub ? ` (updated ${new Date(pub).toLocaleTimeString('en-IN', { hour: 'numeric', minute: '2-digit' })})` : ''}.`;
   }
 
   // Scorer actions
-  const act = (fn) => { fn(); prev = { a: prev.a, b: prev.b }; refresh(); };
-  $('[data-scorer-toggle]').addEventListener('click', () => {
-    if (!record()) {
-      // Continue from whatever is on the board right now.
-      const st = currentStates()[m.id];
-      writeRecord({ events: st.score.rallies.map((side) => ({ id: newId(), type: 'point', side })), confirmed: false });
-    }
+  const act = (fn) => { fn(); refresh(); };
+  const startScoring = () => {
+    if (!record()) writeRecord({ events: [], confirmed: false });
     scoring = true;
+    askingPasskey = false;
     refresh();
+  };
+  $('[data-scorer-toggle]').addEventListener('click', () => {
+    if (isScorer()) return startScoring();
+    askingPasskey = true;
+    refresh();
+    $('[data-passkey-input]').focus();
   });
+  $('[data-passkey]').addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const input = $('[data-passkey-input]');
+    const err = $('[data-passkey-error]');
+    try {
+      if (await checkPasskey(input.value)) {
+        input.value = '';
+        err.hidden = true;
+        startScoring();
+      } else {
+        err.textContent = 'That passkey is not correct. Check with the organizer and try again.';
+        err.hidden = false;
+        input.select();
+      }
+    } catch (ex) {
+      err.textContent = ex.message;
+      err.hidden = false;
+    }
+  });
+  $('[data-passkey-cancel]').addEventListener('click', () => { askingPasskey = false; refresh(); });
+  $('[data-lock]').addEventListener('click', () => { lockScorer(); scoring = false; refresh(); });
+
   document.querySelectorAll('[data-point]').forEach((btn) => btn.addEventListener('click', () => {
-    if (Date.now() < lockUntil) return; // ignore an accidental double tap
+    if (Date.now() < lockUntil || !isScorer()) return; // ignore an accidental double tap
     lockUntil = Date.now() + 450;
     setTimeout(refresh, 460);
     act(() => {
-      const rec = record();
-      const ev = { id: newId(), type: 'point', side: btn.dataset.point };
+      const rec = record() ?? { events: [] };
+      const ev = { id: newId(), type: 'point', side: btn.dataset.point, at: new Date().toISOString() };
       try {
         replay([...rec.events, ev], m.format);
         writeRecord({ ...rec, events: [...rec.events, ev] });
@@ -190,19 +227,27 @@ function init() {
   $('[data-undo]').addEventListener('click', () => act(() => {
     const rec = record();
     if (!rec || rec.confirmed) return;
-    const ev = { id: newId(), type: 'undo' };
+    const ev = { id: newId(), type: 'undo', at: new Date().toISOString() };
     try {
       replay([...rec.events, ev], m.format);
       writeRecord({ ...rec, events: [...rec.events, ev] });
     } catch { /* nothing to undo */ }
   }));
-  $('[data-reset]').addEventListener('click', () => act(() => { writeRecord(null); scoring = false; }));
-  $('[data-result]').addEventListener('click', (e) => {
-    if (!e.target.closest('[data-confirm]')) return;
-    act(() => writeRecord({ ...record(), confirmed: true }));
+  $('[data-delete]').addEventListener('click', () => {
+    if (Date.now() < deleteArmed) {
+      deleteArmed = 0;
+      act(() => { deleteScore(m.id); scoring = false; });
+    } else {
+      deleteArmed = Date.now() + 4000;
+      setTimeout(refresh, 4100);
+      refresh();
+    }
   });
+  $('[data-result]').addEventListener('click', (e) => {
+    if (e.target.closest('[data-confirm]')) act(() => writeRecord({ ...record(), confirmed: true }));
+    if (e.target.closest('[data-reopen]')) act(() => writeRecord({ ...record(), confirmed: false }));
+  });
+  $('[data-download]').addEventListener('click', downloadResults);
 
-  if (record() && !record().confirmed) scoring = true;
   const refresh = startLoop(render);
-  onDemoChange(refresh);
 }

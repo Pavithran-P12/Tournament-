@@ -1,7 +1,7 @@
-import { EVENT } from './tournament-data.js';
-import { tournament, standings, category } from './engine.js';
-import { mountDemoBar, startLoop, onDemoChange, markActiveNav, paintLiveCount, fmtTime, esc, matchHref } from './ui.js';
-import { matchCard, emptyState } from './components.js';
+import { EVENT } from './tournament-data.js?v=20261022g';
+import { tournament, standings, category } from './engine.js?v=20261022g';
+import { mountDrawNotice, startLoop, markActiveNav, paintLiveCount, fmtTime, esc, matchHref } from './ui.js?v=20261022g';
+import { matchCard, emptyState } from './components.js?v=20261022g';
 
 const $ = (s) => document.querySelector(s);
 const T = tournament();
@@ -131,7 +131,7 @@ function knockoutView(states) {
 }
 
 /* ---------- loop ---------- */
-mountDemoBar();
+mountDrawNotice();
 markActiveNav();
 let lastStates = null;
 function render(states) {
@@ -151,5 +151,4 @@ function update() {
   if (lastStates) render(lastStates);
 }
 paintControls();
-const refresh = startLoop(render);
-onDemoChange(refresh);
+startLoop(render);

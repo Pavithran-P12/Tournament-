@@ -1,9 +1,9 @@
 // Builds the fixture list, court schedule, standings and knockout bracket.
-// In this static demo, match results are simulated from a seeded random sequence
-// and revealed according to the demo clock. Later, results come from the database.
+// Match results come from the scorers (published results file plus this device). The seeded
+// simulation below is only used by tests and previews (snapshot(..., { simulate: true })).
 
-import { EVENT, CATEGORIES, GROUP_LETTERS, SEMIS, sampleTeams, rng } from './tournament-data.js';
-import { FORMATS, summarize, gameWinner } from './scoring.js';
+import { EVENT, CATEGORIES, GROUP_LETTERS, SEMIS, sampleTeams, rng } from './tournament-data.js?v=20261022g';
+import { FORMATS, summarize, gameWinner } from './scoring.js?v=20261022g';
 
 const ROUNDS = {
   4: [[[0, 3], [1, 2]], [[0, 2], [1, 3]], [[0, 1], [2, 3]]],
@@ -106,10 +106,12 @@ function sequenceFor(m, a, b) {
 }
 
 /**
- * State of every match at demo time `t` (minutes from midnight).
- * `overrides` maps matchId -> rally sides list entered by a scorer in demo mode.
+ * State of every match at time `t` (minutes from midnight on the tournament day).
+ * `overrides` maps matchId -> { sides, confirmed } (or a plain sides list) entered by a scorer.
+ * With `simulate`, matches without scores follow a generated result (used by tests and previews);
+ * otherwise a match is upcoming until a scorer starts it.
  */
-export function snapshot(t, overrides = {}) {
+export function snapshot(t, overrides = {}, { simulate = false } = {}) {
   const T = tournament();
   const states = {};
   const resolveSlot = (m, ref) => {
@@ -126,10 +128,14 @@ export function snapshot(t, overrides = {}) {
     const a = m.stage === 'league' ? T.teamIndex[m.a] : resolveSlot(m, m.from[0]);
     const b = m.stage === 'league' ? T.teamIndex[m.b] : resolveSlot(m, m.from[1]);
     const st = { match: m, a, b, status: 'upcoming', score: summarize([], m.format, EVENT.firstServer) };
-    if (overrides[m.id]) {
-      st.score = summarize(overrides[m.id], m.format, EVENT.firstServer);
+    const ov = overrides[m.id];
+    if (ov && a && b) {
+      const sides = Array.isArray(ov) ? ov : ov.sides;
+      st.score = summarize(sides, m.format, EVENT.firstServer);
       st.status = st.score.winner ? 'completed' : 'live';
-      st.scoredByYou = true;
+      st.confirmed = !Array.isArray(ov) && !!ov.confirmed;
+    } else if (!simulate) {
+      st.status = a && b ? 'upcoming' : 'waiting';
     } else if (a && b && t >= m.start) {
       const seq = sequenceFor(m, a, b);
       if (t >= m.end) {

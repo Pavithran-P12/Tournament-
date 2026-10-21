@@ -1,69 +1,139 @@
-// Shared page helpers: demo clock, demo scoring store, formatting and the demo bar.
+// Shared page helpers: results data, scorer access, formatting and the page refresh loop.
 
-import { EVENT } from './tournament-data.js';
-import { tournament, snapshot } from './engine.js';
-import { replay } from './scoring.js';
+import { EVENT } from './tournament-data.js?v=20261022g';
+import { tournament, snapshot } from './engine.js?v=20261022g';
+import { replay } from './scoring.js?v=20261022g';
 
 /* ---------- storage (best effort; the pages work without it) ---------- */
-function load(key, fallback) {
+function load(store, key, fallback) {
   try {
-    const v = localStorage.getItem(key);
+    const v = store.getItem(key);
     return v ? JSON.parse(v) : fallback;
   } catch {
     return fallback;
   }
 }
-function save(key, value) {
+function save(store, key, value) {
   try {
-    localStorage.setItem(key, JSON.stringify(value));
+    store.setItem(key, JSON.stringify(value));
   } catch {
     /* private mode or blocked storage */
   }
 }
+const local = () => (typeof localStorage === 'undefined' ? null : localStorage);
+const session = () => (typeof sessionStorage === 'undefined' ? null : sessionStorage);
 
-/* ---------- demo clock ---------- */
-const CLOCK_KEY = 'tsp-demo-clock-v1';
-const MIN_T = 8 * 60 + 30;
-const MAX_T = EVENT.dayEnd;
-let clock = load(CLOCK_KEY, null) || { demo: 11 * 60 + 40, real: Date.now(), speed: 10, playing: true };
-
-const urlT = new URLSearchParams(location.search).get('t');
-if (urlT && /^\d{1,2}:\d{2}$/.test(urlT)) {
-  const [h, m] = urlT.split(':').map(Number);
-  clock = { ...clock, demo: h * 60 + m, real: Date.now() };
+/* ---------- time of day at the venue (India) ---------- */
+export function venueNow() {
+  const parts = new Intl.DateTimeFormat('en-CA', {
+    timeZone: 'Asia/Kolkata', year: 'numeric', month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit', hourCycle: 'h23',
+  }).formatToParts(new Date());
+  const get = (t) => parts.find((p) => p.type === t).value;
+  const date = `${get('year')}-${get('month')}-${get('day')}`;
+  const minutes = Number(get('hour')) * 60 + Number(get('minute'));
+  const phase = date < EVENT.date ? 'before' : date > EVENT.date ? 'after' : minutes < EVENT.dayStart ? 'morning' : minutes >= EVENT.dayEnd ? 'evening' : 'during';
+  return { date, minutes, phase };
 }
 
-export function now() {
-  const t = clock.playing ? clock.demo + ((Date.now() - clock.real) / 60000) * clock.speed : clock.demo;
-  return Math.max(MIN_T, Math.min(MAX_T, t));
-}
-function reanchor(patch) {
-  clock = { ...clock, demo: now(), real: Date.now(), ...patch };
-  save(CLOCK_KEY, clock);
-}
-export const clockControls = {
-  set: (t) => reanchor({ demo: t }),
-  toggle: () => reanchor({ playing: !clock.playing }),
-  speed: (s) => reanchor({ speed: s }),
-  get state() { return clock; },
-};
+/* ---------- results: published file + this device's scoring ---------- */
+// data/results.json is the published copy everyone sees. Scores entered on this device are
+// kept locally until the scorer downloads a new results file and the organizer publishes it.
+const LOCAL_KEY = 'tsp-scores-v1';
+let published = { updated: null, matches: {} };
+let publishedLoaded = false;
 
-/* ---------- demo scoring (stands in for the database until the backend exists) ---------- */
-const SCORE_KEY = 'tsp-demo-scoring-v1';
-export function scoringStore() {
-  return load(SCORE_KEY, {});
+export async function loadPublished() {
+  try {
+    const res = await fetch(`data/results.json?t=${Date.now()}`, { cache: 'no-store' });
+    if (res.ok) {
+      const json = await res.json();
+      if (json && typeof json.matches === 'object') {
+        published = json;
+        pruneLocal();
+      }
+    }
+  } catch {
+    /* offline or file missing: keep what we have */
+  }
+  publishedLoaded = true;
+  return published;
 }
-export function saveScoring(store) {
-  save(SCORE_KEY, store);
+/** Once the published file contains this device's changes, they no longer count as pending. */
+function pruneLocal() {
+  const all = localScores();
+  let changed = false;
+  for (const [id, rec] of Object.entries(all)) {
+    const pub = published.matches[id];
+    const same = rec.deleted
+      ? !pub
+      : pub && !!pub.confirmed === !!rec.confirmed && JSON.stringify(pub.events) === JSON.stringify(rec.events);
+    if (same) { delete all[id]; changed = true; }
+  }
+  if (changed) save(local(), LOCAL_KEY, all);
 }
+export const publishedInfo = () => ({ updated: published.updated, loaded: publishedLoaded });
+
+export function localScores() {
+  return load(local(), LOCAL_KEY, {});
+}
+export function saveLocalScore(id, rec) {
+  const all = localScores();
+  all[id] = { ...rec, updatedAt: new Date().toISOString() };
+  save(local(), LOCAL_KEY, all);
+}
+/** Deleting leaves a marker so the published score is hidden on this device and left out of the next download. */
+export function deleteScore(id) {
+  saveLocalScore(id, { deleted: true, events: [] });
+}
+
+/** Merged view: this device's changes on top of the published file. */
+export function mergedRecords() {
+  const out = { ...published.matches };
+  for (const [id, rec] of Object.entries(localScores())) {
+    if (rec.deleted) delete out[id];
+    else out[id] = rec;
+  }
+  return out;
+}
+export function recordFor(id) {
+  return mergedRecords()[id];
+}
+export function pendingChanges() {
+  return Object.keys(localScores()).length;
+}
+
+/** The file the organizer publishes as data/results.json. */
+export function resultsFile() {
+  const T = tournament();
+  const matches = {};
+  for (const [id, rec] of Object.entries(mergedRecords())) {
+    if (!T.byId[id] || !rec.events?.length) continue;
+    matches[id] = { events: rec.events, confirmed: !!rec.confirmed };
+  }
+  return { updated: new Date().toISOString(), matches };
+}
+export function downloadResults() {
+  const blob = new Blob([JSON.stringify(resultsFile(), null, 2)], { type: 'application/json' });
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = 'results.json';
+  document.body.append(a);
+  a.click();
+  a.remove();
+  setTimeout(() => URL.revokeObjectURL(a.href), 1000);
+}
+export function clearLocalScores() {
+  save(local(), LOCAL_KEY, {});
+}
+
 function overrides() {
   const T = tournament();
   const out = {};
-  for (const [id, rec] of Object.entries(scoringStore())) {
+  for (const [id, rec] of Object.entries(mergedRecords())) {
     const m = T.byId[id];
-    if (!m) continue;
+    if (!m || !rec.events) continue;
     try {
-      out[id] = replay(rec.events, m.format).rallies;
+      out[id] = { sides: replay(rec.events, m.format).rallies, confirmed: !!rec.confirmed };
     } catch {
       /* ignore a corrupt record */
     }
@@ -72,7 +142,27 @@ function overrides() {
 }
 
 export function currentStates() {
-  return snapshot(now(), overrides());
+  return snapshot(venueNow().minutes, overrides());
+}
+
+/* ---------- scorer passkey ---------- */
+// Only a salted SHA-256 hash is stored here, never the passkey itself.
+// This keeps casual visitors out; it is not server-side security (see README).
+const PASS_HASH = '89160e92f57e7ebb2ed3191d7a68ac6c499bc9a16f270b16b719752784abf9a8';
+const UNLOCK_KEY = 'tsp-scorer-unlocked';
+
+export async function checkPasskey(input) {
+  if (!crypto?.subtle) throw new Error('This browser cannot check the passkey. Open the site over https.');
+  const data = new TextEncoder().encode(`tsp-scorer:${input}`);
+  const digest = await crypto.subtle.digest('SHA-256', data);
+  const hex = [...new Uint8Array(digest)].map((b) => b.toString(16).padStart(2, '0')).join('');
+  const ok = hex === PASS_HASH;
+  if (ok) save(session(), UNLOCK_KEY, true);
+  return ok;
+}
+export const isScorer = () => load(session(), UNLOCK_KEY, false) === true;
+export function lockScorer() {
+  try { sessionStorage.removeItem(UNLOCK_KEY); } catch { /* ignore */ }
 }
 
 /* ---------- formatting ---------- */
@@ -86,7 +176,8 @@ export function fmtTime(min) {
 export function esc(s) {
   return String(s ?? '').replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c]);
 }
-export const matchHref = (id) => `match.html?id=${encodeURIComponent(id)}`;
+// Hash form works on every static server, including ones that rewrite or redirect .html URLs.
+export const matchHref = (id) => `match.html#${encodeURIComponent(id)}`;
 
 export function stageLabel(m) {
   if (m.stage === 'league') return `Group ${m.group}, round ${m.round}`;
@@ -110,58 +201,33 @@ export function statusPill(st) {
   return `<span class="pill pill-${cls}">${text}</span>`;
 }
 
-/* ---------- page loop + demo bar ---------- */
+/* ---------- page loop ---------- */
 export function startLoop(render) {
   let last = '';
-  const tick = () => {
+  const tick = (force = false) => {
     const states = currentStates();
     // Re-render only when something visible changed.
-    const sig = Object.values(states).map((s) => `${s.status}${s.score.a}-${s.score.b}`).join('|') + Math.floor(now());
-    if (sig !== last) {
+    const sig = Object.values(states).map((s) => `${s.status}${s.score.a}-${s.score.b}`).join('|') + venueNow().minutes;
+    if (force || sig !== last) {
       last = sig;
-      render(states, now());
+      render(states, venueNow());
     }
-    paintDemoBar();
   };
-  tick();
-  setInterval(tick, 1000);
-  window.addEventListener('storage', () => { clock = load(CLOCK_KEY, clock); last = ''; tick(); });
-  return () => { last = ''; tick(); };
+  tick(true);
+  loadPublished().then(() => tick(true));
+  setInterval(tick, 2000);
+  setInterval(() => loadPublished().then(() => tick()), 60000); // pick up newly published results
+  window.addEventListener('storage', () => tick(true)); // scoring in another tab on this device
+  return () => tick(true);
 }
 
-let bar;
-export function mountDemoBar() {
-  bar = document.createElement('div');
-  bar.className = 'demo-bar';
-  bar.innerHTML = `
-    <span class="demo-tag">Demo</span>
-    <span class="demo-note">Sample teams, simulated clock</span>
-    <button type="button" class="demo-play" aria-label="Pause demo clock"></button>
-    <output class="demo-time" aria-live="off"></output>
-    <input class="demo-range" type="range" min="${MIN_T}" max="${MAX_T}" step="1" aria-label="Demo time of day">
-    <select class="demo-speed" aria-label="Demo clock speed">
-      <option value="1">1×</option><option value="10">10×</option><option value="30">30×</option>
-    </select>`;
-  document.body.prepend(bar);
-  bar.querySelector('.demo-play').addEventListener('click', () => { clockControls.toggle(); refresh(); });
-  const range = bar.querySelector('.demo-range');
-  range.addEventListener('input', () => { clockControls.set(Number(range.value)); refresh(); });
-  bar.querySelector('.demo-speed').addEventListener('change', (e) => { clockControls.speed(Number(e.target.value)); });
-  paintDemoBar();
-}
-let refresh = () => {};
-export function onDemoChange(fn) { refresh = fn; }
-
-function paintDemoBar() {
-  if (!bar) return;
-  const t = now();
-  bar.querySelector('.demo-time').textContent = fmtTime(t);
-  const range = bar.querySelector('.demo-range');
-  if (document.activeElement !== range) range.value = Math.floor(t);
-  const play = bar.querySelector('.demo-play');
-  play.textContent = clock.playing ? 'Pause' : 'Play';
-  play.setAttribute('aria-label', clock.playing ? 'Pause demo clock' : 'Run demo clock');
-  bar.querySelector('.demo-speed').value = String(clock.speed);
+/** Shown until the real draw is entered in tournament-data.js. */
+export function mountDrawNotice() {
+  if (EVENT.drawPublished) return;
+  const n = document.createElement('div');
+  n.className = 'draw-notice';
+  n.innerHTML = '<strong>Sample draw.</strong> The real fixtures are published here 24 hours before play.';
+  document.body.prepend(n);
 }
 
 export function markActiveNav() {

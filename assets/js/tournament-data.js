@@ -1,5 +1,5 @@
 // Tournament configuration. Event details come from the published poster.
-// Teams below are SAMPLE DATA for the demo; they will be replaced by the real entry list.
+// Teams below are SAMPLE DATA until the real entry list is entered; see drawPublished.
 
 export const EVENT = {
   name: 'ThirdSpace Play',
@@ -14,7 +14,9 @@ export const EVENT = {
   area: 'Perungudi, Chennai',
   fee: { earlyBird: 599, regular: 699 },
   registrationCloses: '22 October 2026',
-  courts: 5, // assumption for the demo, to be confirmed with the venue
+  courts: 5, // to be confirmed with the venue
+  // Set to true once the real teams are entered below; until then the site shows a sample-draw notice.
+  drawPublished: false,
   leagueSlot: 15, // minutes per league match slot
   knockoutSlot: 20,
   firstServer: 'A',

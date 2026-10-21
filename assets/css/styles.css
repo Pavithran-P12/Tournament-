@@ -1,4 +1,5 @@
-/* ThirdSpace Play: court green, line white, magenta for live play.
+/* ThirdSpace Play: court green throughout
+   where something is a badminton court, line white, magenta for live play.
    Team A is cork amber, team B is sky; those two colours mean the same thing everywhere. */
 
 :root {
@@ -8,6 +9,10 @@
   --edge: #2b7466;
   --line: #eef3ef;
   --muted: #a9c4bc;
+  --turf: #0e4a41;
+  --turf-deep: #0a3831;
+  --turf-mid: #145649;
+  --turf-edge: #2b7466;
   --live: #ec3d7a;
   --live-hover: #d82c69;
   --team-a: #f3c350;
@@ -48,19 +53,8 @@ p { margin: 0; }
 .muted { color: var(--muted); }
 .muted-ink { color: var(--ink-2); }
 
-/* ---------- demo bar ---------- */
-.demo-bar {
-  display: flex; align-items: center; gap: 10px; flex-wrap: wrap;
-  padding: 8px var(--gutter);
-  background: #062a25; border-bottom: 1px solid var(--edge);
-  font-size: 13px; color: var(--muted);
-}
-.demo-tag { background: var(--team-a); color: var(--ink); font-weight: 700; padding: 1px 8px; border-radius: 4px; }
-.demo-time { font: 800 18px/1 var(--display); color: var(--line); min-width: 72px; letter-spacing: .02em; }
-.demo-play, .demo-speed { background: transparent; border: 1px solid var(--edge); border-radius: var(--radius-s); padding: 3px 10px; cursor: pointer; }
-.demo-speed option { color: var(--ink); }
-.demo-range { flex: 1 1 160px; accent-color: var(--team-a); min-width: 120px; }
-@media (max-width: 560px) { .demo-note { display: none; } }
+/* ---------- sample draw notice ---------- */
+.draw-notice { padding: 8px var(--gutter); background: var(--team-a); color: var(--ink); font-size: 14px; text-align: center; }
 
 /* ---------- header ---------- */
 .site-header {
@@ -109,11 +103,10 @@ p { margin: 0; }
 .pill-done { background: rgba(238, 243, 239, .14); color: var(--line); }
 .pill-next { border: 1px solid var(--edge); color: var(--muted); }
 .pill-wait { border: 1px dashed var(--edge); color: var(--muted); }
-.pill-demo { background: var(--team-a); color: var(--ink); }
 @keyframes pulse { 50% { opacity: .35; } }
 
 /* ---------- hero ---------- */
-.hero { position: relative; overflow: hidden; background: var(--court); border-bottom: 4px solid var(--line); }
+.hero { position: relative; overflow: hidden; background: var(--turf); border-bottom: 4px solid var(--line); }
 .hero-court { position: absolute; top: 14px; bottom: 14px; left: 12px; right: 12px; width: calc(100% - 24px); height: calc(100% - 28px); opacity: .45; }
 .hero-court line, .hero-court rect { vector-effect: non-scaling-stroke; }
 @media (max-width: 719px) { .hero-court { opacity: .2; } }
@@ -128,7 +121,7 @@ p { margin: 0; }
   font: 900 clamp(46px, 12.5vw, 160px)/.84 var(--display);
   text-transform: uppercase; letter-spacing: -.01em;
   margin-bottom: 24px;
-  text-shadow: 0 4px 0 var(--court-deep);
+  text-shadow: 0 4px 0 var(--turf-deep);
 }
 .hero-lede { max-width: 34em; font-size: 18px; margin-bottom: 24px; }
 .hero-facts { display: grid; gap: 10px; margin: 0 0 28px; max-width: 640px; }
@@ -318,8 +311,8 @@ p { margin: 0; }
 .court {
   position: relative; width: 100%; max-width: 440px; margin: 0 auto;
   aspect-ratio: 610 / 1080; max-height: 72vh;
-  background: var(--court); border-radius: 4px;
-  box-shadow: 0 0 0 10px var(--court-mid), 0 0 0 11px var(--edge);
+  background: var(--turf); border-radius: 4px;
+  box-shadow: 0 0 0 10px var(--turf-mid), 0 0 0 11px var(--turf-edge);
   overflow: hidden;
 }
 .page-match.is-scoring .court { max-height: 46vh; }
@@ -329,13 +322,13 @@ p { margin: 0; }
 .half { position: absolute; left: 0; right: 0; height: 50%; display: flex; flex-direction: column; align-items: center; justify-content: space-between; padding: 7% 8% 9%; text-align: center; }
 .half-a { top: 0; }
 .half-b { bottom: 0; padding: 9% 8% 7%; }
-.half-team { font-weight: 700; font-size: clamp(14px, 3.6vw, 18px); line-height: 1.2; padding: 4px 10px; border-radius: 4px; background: var(--court); max-width: 100%; }
+.half-team { font-weight: 700; font-size: clamp(14px, 3.6vw, 18px); line-height: 1.2; padding: 4px 10px; border-radius: 4px; background: var(--turf); max-width: 100%; }
 .half-a .half-team { color: var(--team-a); }
 .half-b .half-team { color: var(--team-b); }
 .half-score {
   font: 900 clamp(96px, 30vw, 170px)/.8 var(--display);
   font-variant-numeric: tabular-nums;
-  padding: 0 12px; background: var(--court); border-radius: 6px;
+  padding: 0 12px; background: var(--turf); border-radius: 6px;
   margin-top: -6%;
 }
 .half-b .half-score { margin-top: 0; margin-bottom: -6%; }
@@ -350,7 +343,7 @@ p { margin: 0; }
   background: var(--live); color: #fff; font-weight: 700; font-size: 14px;
   padding: 5px 12px; border-radius: 99px; white-space: nowrap; max-width: 92%; overflow: hidden; text-overflow: ellipsis;
 }
-.court[data-status='upcoming'] .net-chip, .court[data-status='waiting'] .net-chip { background: var(--court-deep); border: 1px solid var(--edge); }
+.court[data-status='upcoming'] .net-chip, .court[data-status='waiting'] .net-chip { background: var(--turf-deep); border: 1px solid var(--turf-edge); }
 .court[data-status='completed'] .net-chip { background: var(--line); color: var(--ink); }
 .shuttle-marker { position: absolute; width: 30px; height: 30px; transform: translate(-50%, -50%); transition: left .35s, top .35s; filter: drop-shadow(0 2px 3px rgba(0, 0, 0, .4)); }
 .shuttle-marker img { width: 100%; height: 100%; }
@@ -430,7 +423,7 @@ p { margin: 0; }
   .hero-slogan-mobile { display: none; }
   .hero-badge { display: block; animation: badge-in .7s .9s cubic-bezier(.2, .9, .3, 1.2) both; }
   .hero-badge img { width: 100%; height: auto; filter: drop-shadow(0 18px 30px rgba(0, 0, 0, .35)); }
-  .hero-badge figcaption { position: absolute; left: -28px; bottom: -40px; white-space: nowrap; transform: rotate(-6deg); font-size: 46px; text-shadow: 0 2px 0 var(--court-deep); }
+  .hero-badge figcaption { position: absolute; left: -28px; bottom: -40px; white-space: nowrap; transform: rotate(-6deg); font-size: 46px; text-shadow: 0 2px 0 var(--turf-deep); }
 }
 @keyframes badge-in { from { opacity: 0; transform: scale(.85) rotate(-6deg); } }
 @media (prefers-reduced-motion: reduce) { .hero-badge { animation: none; } }
@@ -464,3 +457,11 @@ p { margin: 0; }
 .copyright { font-size: 13px; color: var(--muted); }
 @keyframes beat { 0%, 100% { transform: scale(1); } 15% { transform: scale(1.22); } 30% { transform: scale(1); } 45% { transform: scale(1.14); } }
 @media (prefers-reduced-motion: reduce) { .made-heart { animation: none; } }
+
+/* ---------- scorer passkey + publishing ---------- */
+.passkey h2 { font-size: 24px; }
+.field { display: grid; gap: 6px; font-size: 14px; color: var(--muted); }
+.field input { min-height: 48px; padding: 10px 12px; border-radius: var(--radius-s); border: 1px solid var(--edge); background: var(--court-deep); color: var(--line); font-size: 18px; }
+.field input:focus-visible { border-color: var(--team-a); }
+.form-error { color: #ff8fb5; font-size: 14px; font-weight: 600; }
+.publish-box { display: grid; gap: 10px; justify-items: start; padding-top: 12px; border-top: 1px solid var(--edge); font-size: 14px; color: var(--muted); }

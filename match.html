@@ -11,7 +11,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Big+Shoulders+Display:wght@600;800;900&family=Caveat:wght@600;700&family=Figtree:wght@400;500;600;700&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="assets/css/styles.css?v=20261022a">
+  <link rel="stylesheet" href="assets/css/styles.css?v=20261022g">
 </head>
 <body class="page-match">
   <header class="site-header">
@@ -70,21 +70,37 @@
         <section class="scorer" data-scorer hidden aria-labelledby="scorer-title">
           <div class="scorer-head">
             <h2 id="scorer-title">Scorer controls</h2>
-            <span class="pill pill-demo">Demo</span>
+            <button type="button" class="btn btn-text" data-lock>Lock</button>
           </div>
-          <p class="scorer-note">In the demo anyone can score. On the day, only the scorer assigned to this court can, and the server checks every point.</p>
           <div class="point-buttons">
             <button type="button" class="point-btn point-a" data-point="A"><span>Point to</span><strong data-btn-team="A"></strong></button>
             <button type="button" class="point-btn point-b" data-point="B"><span>Point to</span><strong data-btn-team="B"></strong></button>
           </div>
           <div class="scorer-row">
             <button type="button" class="btn btn-ghost" data-undo>Undo last point</button>
-            <button type="button" class="btn btn-text" data-reset>Clear demo scoring</button>
+            <button type="button" class="btn btn-text" data-delete>Delete this match's scores</button>
           </div>
           <div class="result-box" data-result hidden></div>
+          <div class="publish-box">
+            <p data-pending></p>
+            <button type="button" class="btn btn-ghost" data-download>Download results file</button>
+          </div>
         </section>
 
-        <button type="button" class="btn btn-live btn-block" data-scorer-toggle hidden>Score this match (demo)</button>
+        <form class="scorer passkey" data-passkey hidden aria-labelledby="passkey-title">
+          <h2 id="passkey-title">Scorer passkey</h2>
+          <label class="field">
+            <span>Enter the passkey to score this match</span>
+            <input type="password" name="passkey" autocomplete="current-password" required data-passkey-input>
+          </label>
+          <p class="form-error" data-passkey-error role="alert" hidden></p>
+          <div class="scorer-row">
+            <button type="submit" class="btn btn-live">Unlock scoring</button>
+            <button type="button" class="btn btn-text" data-passkey-cancel>Cancel</button>
+          </div>
+        </form>
+
+        <button type="button" class="btn btn-live btn-block" data-scorer-toggle hidden>Score this match</button>
 
         <section class="panel" aria-labelledby="sheet-title">
           <h2 id="sheet-title">Score sheet</h2>
@@ -115,6 +131,6 @@
     </div>
   </footer>
 
-  <script type="module" src="assets/js/match.js?v=20261022a"></script>
+  <script type="module" src="assets/js/match.js?v=20261022g"></script>
 </body>
 </html>
