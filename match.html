@@ -11,7 +11,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Big+Shoulders+Display:wght@600;800;900&family=Caveat:wght@600;700&family=Figtree:wght@400;500;600;700&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="assets/css/styles.css?v=20261022g">
+  <link rel="stylesheet" href="assets/css/styles.css?v=20261022w">
 </head>
 <body class="page-match">
   <header class="site-header">
@@ -34,7 +34,12 @@
         <h1 class="match-title" data-title></h1>
         <p class="match-meta" data-meta></p>
       </div>
-      <div data-status></div>
+      <div class="head-actions">
+        <div data-status></div>
+        <button type="button" class="icon-btn" data-share hidden aria-label="Share result image" title="Share result">
+          <svg viewBox="0 0 24 24" width="20" height="20" aria-hidden="true"><path d="M12 15V3m0 0L7.5 7.5M12 3l4.5 4.5M5 12v7a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2v-7" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+        </button>
+      </div>
     </div>
 
     <div class="match-grid">
@@ -63,6 +68,7 @@
           <p class="net-chip" data-net-chip hidden></p>
           <span class="shuttle-marker" data-shuttle hidden><img src="assets/img/shuttle.svg" alt=""><span class="sr-only" data-serve-text></span></span>
         </div>
+        <div class="games-box" data-games hidden></div>
         <p class="sr-only" aria-live="polite" data-announce></p>
       </div>
 
@@ -107,6 +113,11 @@
           <div class="sheet" data-sheet tabindex="0" aria-label="Rally by rally score sheet"></div>
         </section>
 
+        <section class="panel" aria-labelledby="stats-title" data-stats-panel hidden>
+          <h2 id="stats-title">Match stats</h2>
+          <div class="stats" data-stats></div>
+        </section>
+
         <section class="panel" aria-labelledby="info-title">
           <h2 id="info-title">Match details</h2>
           <dl class="details" data-details></dl>
@@ -131,6 +142,6 @@
     </div>
   </footer>
 
-  <script type="module" src="assets/js/match.js?v=20261022g"></script>
+  <script type="module" src="assets/js/match.js?v=20261022w"></script>
 </body>
 </html>

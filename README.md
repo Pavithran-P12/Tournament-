@@ -2,13 +2,13 @@
 
 Website for the ThirdSpace Play Badminton Tournament (Sunday 25 October 2026, Rapid Sports Academy, Perungudi, Chennai).
 
-**Current phase: static site.** Scores are entered by scorers with a passkey and published through a JSON file. Teams are sample data until the real draw is entered (see below).
+**Current phase: static site.** Scores are entered by scorers with a passkey and published through a JSON file. The real entry list and the random draw (done 22 October 2026) are in `assets/js/tournament-data.js`.
 
 ## Pages
 
 | Page | File | What it shows |
 |---|---|---|
-| Tournament home | `index.html` | Event details, matches on court now, coming up, categories, format, entry, rules, venue |
+| Tournament home | `index.html` | Event details, matches on court now, coming up, categories, format, what's included, rules, venue |
 | Match center | `matches.html` | Schedule (filter by category, status, court, round), group tables, knockout bracket |
 | Match | `match.html#BMD-A-01` | Court scoreboard, serving side, rally-by-rally score sheet, scorer controls (passkey) |
 
@@ -27,20 +27,29 @@ If several scorers use different phones, collect each file and publish one at a 
 `node -e "console.log(require('crypto').createHash('sha256').update('tsp-scorer:NEWPASSKEY').digest('hex'))"`
 and paste the result into `PASS_HASH`.
 
-## Entering the real draw
+## The draw and formats
 
-Edit `assets/js/tournament-data.js`: replace the sample teams, set the group sizes in `CATEGORIES`, and set `drawPublished: true` to remove the "Sample draw" notice.
+| Category | Teams | Groups | Knockouts |
+|---|---|---|---|
+| Beginner Men's | 24 | 4 groups of 6, each team plays 3 randomly drawn opponents | Group winners: semi-finals (A v C, B v D), final |
+| Intermediate Men's | 18 | 6, 4, 4, 4 (group A: 3 randomly drawn opponents each) | Group winners: semi-finals (A v C, B v D), final |
+| Intermediate Mixed | 16 | 4 groups of 4 | Group winners: semi-finals (A v C, B v D), final |
+| Beginner Women's | 4 | 1 group of 4 | 1st v 2nd in the final |
+
+Mixed entry 9 was a duplicate of entry 6 and was removed. Names are spelled as given by the organizer.
+
+The schedule is built automatically on 5 courts (14-minute league slots, 35-minute knockout slots for best-of-3, 9:00 AM to about 3:55 PM). Nobody is ever on two courts at once, including players entered in two categories (`SAME_PERSON` in `tournament-data.js` links different spellings of the same person), and players get a slot of rest between league matches. Knockouts run in the order set in `KNOCKOUT_SLOTS`, which keeps categories that share players apart.
 
 ## Cache versions
 
 Every CSS/JS link carries `?v=<version>` so phones never mix old and new files. After changing any CSS or JS, bump it everywhere:
-`sed -i 's/?v=20261022g/?v=NEWVERSION/g' *.html assets/js/*.js`
+`sed -i 's/?v=20261022w/?v=NEWVERSION/g' *.html assets/js/*.js`
 
 ## Format rules in the code
 
-- League: single game to 15, win by 2, capped at 21. Knockout: single game to 21, win by 2, capped at 30. (`assets/js/scoring.js`)
-- Groups of 4, with some groups of 3. Group ranking: matches won, head-to-head (two-way ties), point difference, points scored, then the organizer decides.
-- Semi-finals: A1 v C1 and B1 v D1. No third-place match. (`assets/js/tournament-data.js`)
+- League: single game to 15. Knockouts (semi-finals and finals): best of 3 games to 21. Rally scoring with a golden point, no deuce: at 14–14 (league) or 20–20 (knockout) the next rally wins the game. (`assets/js/scoring.js`)
+- Group ranking: matches won, head-to-head (two-way ties), point difference, points scored, then the organizer decides.
+- Groups of 6 (all of Beginner Men's, Intermediate Men's group A) use fixed random pairings (`pairings` in `tournament-data.js`): 3 rounds, no repeated opponents. No third-place matches.
 
 ## Run locally
 
@@ -64,7 +73,7 @@ npm test             # scoring and schedule tests (Node 20+)
 index.html, matches.html, match.html
 assets/css/styles.css
 assets/js/scoring.js          scoring rules (pure functions, tested)
-assets/js/tournament-data.js  event details, categories, sample teams
+assets/js/tournament-data.js  event details, teams, draw, knockout order
 assets/js/engine.js           fixtures, court schedule, standings, bracket
 assets/js/ui.js               results file, scorer passkey, shared helpers
 assets/js/components.js       match card

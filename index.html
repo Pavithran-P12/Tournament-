@@ -11,7 +11,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Big+Shoulders+Display:wght@600;800;900&family=Caveat:wght@600;700&family=Figtree:wght@400;500;600;700&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="assets/css/styles.css?v=20261022g">
+  <link rel="stylesheet" href="assets/css/styles.css?v=20261022w">
 </head>
 <body class="page-home">
   <header class="site-header">
@@ -91,15 +91,21 @@
       <div class="wrap format">
         <div>
           <h2 id="format-title">How the day runs</h2>
-          <p class="muted-ink">Teams are drawn into groups of four, with a few groups of three. Everyone plays everyone in their group, then the four group winners in each category play the semi-finals.</p>
+          <p class="muted-ink">Teams play in groups, then the knockouts:</p>
+          <ul class="format-list">
+            <li><strong>Beginner Men's:</strong> 4 groups of 6. Each team plays 3 opponents from its group, drawn at random. Group winners play the semi-finals.</li>
+            <li><strong>Intermediate Men's:</strong> 4 groups. Group A has 6 teams, each playing 3 opponents drawn at random; groups B, C and D have 4 teams and everyone plays everyone. Group winners play the semi-finals.</li>
+            <li><strong>Intermediate Mixed:</strong> 4 groups of 4, everyone plays everyone. Group winners play the semi-finals.</li>
+            <li><strong>Beginner Women's:</strong> 1 group of 4, everyone plays everyone. The top two play the final.</li>
+          </ul>
         </div>
         <ol class="timeline" data-timeline></ol>
         <div class="scoring-note">
           <h3>Scoring</h3>
-          <p>Rally scoring, one game per match.</p>
+          <p>Rally scoring with a golden point: there is no deuce, so at one point from the target, the next rally wins the game.</p>
           <ul>
-            <li><strong>League:</strong> first to 15. At 14–14 a team must lead by 2, up to a maximum of 21.</li>
-            <li><strong>Semi-finals and finals:</strong> first to 21. At 20–20 a team must lead by 2, up to a maximum of 30.</li>
+            <li><strong>League:</strong> one game to 15. At 14–14 the next rally wins.</li>
+            <li><strong>Semi-finals and finals:</strong> best of 3 games to 21. At 20–20 the next rally wins the game.</li>
             <li><strong>Group ranking:</strong> matches won, then head-to-head, then point difference, then points scored.</li>
           </ul>
         </div>
@@ -109,9 +115,8 @@
     <section class="band band-court" aria-labelledby="inc-title">
       <div class="wrap included">
         <div>
-          <h2 id="inc-title">Entry</h2>
-          <p class="fee"><span class="fee-amount">₹599</span> early bird <span class="fee-sep">or</span> <span class="fee-amount">₹699</span> regular</p>
-          <p class="muted">Registration closes 22 October 2026. Spots are limited. Fixtures are shared with every team 24 hours before play.</p>
+          <h2 id="inc-title">What's included</h2>
+          <p class="muted inc-lede">Every team gets these on the day. Fixtures are shared with all teams 24 hours before play.</p>
         </div>
         <ul class="inc-list" data-includes></ul>
       </div>
@@ -171,6 +176,6 @@
     </div>
   </footer>
 
-  <script type="module" src="assets/js/home.js?v=20261022g"></script>
+  <script type="module" src="assets/js/home.js?v=20261022w"></script>
 </body>
 </html>

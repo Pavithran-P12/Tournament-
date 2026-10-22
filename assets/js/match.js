@@ -1,11 +1,12 @@
-import { EVENT } from './tournament-data.js?v=20261022g';
-import { tournament, category } from './engine.js?v=20261022g';
-import { describeFormat, replay } from './scoring.js?v=20261022g';
+import { EVENT } from './tournament-data.js?v=20261022w';
+import { tournament, category } from './engine.js?v=20261022w';
+import { describeFormat, replay, gameScores } from './scoring.js?v=20261022w';
 import {
   mountDrawNotice, startLoop, markActiveNav, paintLiveCount, fmtTime, esc,
   stageLabel, statusPill, teamLabel, recordFor, saveLocalScore, deleteScore,
   isScorer, checkPasskey, lockScorer, downloadResults, pendingChanges, publishedInfo,
-} from './ui.js?v=20261022g';
+} from './ui.js?v=20261022w';
+import { openShare } from './share.js?v=20261022w';
 
 const $ = (s) => document.querySelector(s);
 const T = tournament();
@@ -47,15 +48,17 @@ function init() {
     const nameA = teamLabel(st, 'A');
     const nameB = teamLabel(st, 'B');
 
-    $('[data-title]').innerHTML = `${esc(nameA)} <span class="vs">v</span> ${esc(nameB)}`;
+    const wA = s.winner === 'A' && st.status === 'completed' ? '<span class="w-badge" title="Winner">W</span>' : '';
+    const wB = s.winner === 'B' && st.status === 'completed' ? '<span class="w-badge" title="Winner">W</span>' : '';
+    $('[data-title]').innerHTML = `<span class="tt-a${wA ? ' is-winner' : ''}">${esc(nameA)}${wA}</span> <span class="vs">v</span> <span class="tt-b${wB ? ' is-winner' : ''}">${esc(nameB)}${wB}</span>`;
     $('[data-meta]').textContent = `${stageLabel(m)}. Court ${m.court}, ${fmtTime(m.start)}.`;
     $('[data-status]').innerHTML = statusPill(st);
 
     const court = $('[data-court]');
     court.dataset.status = st.status;
     court.dataset.winner = s.winner ?? '';
-    $('[data-team="A"]').textContent = nameA;
-    $('[data-team="B"]').textContent = nameB;
+    $('[data-team="A"]').innerHTML = `${esc(nameA)}${wA}`;
+    $('[data-team="B"]').innerHTML = `${esc(nameB)}${wB}`;
     for (const side of ['A', 'B']) {
       const el = $(`[data-score="${side}"]`);
       const val = side === 'A' ? s.a : s.b;
@@ -85,9 +88,12 @@ function init() {
 
     const chip = $('[data-net-chip]');
     let chipText = '';
-    if (st.status === 'completed') chipText = `${st.winnerTeam ? esc(st.winnerTeam.name) : ''} win`;
-    else if (st.status === 'live' && s.gamePoint) chipText = 'Match point';
-    else if (st.status === 'live' && s.deuce) chipText = 'Deuce';
+    const multi = m.format.bestOf > 1;
+    const finalLine = multi ? `${Math.max(s.gamesWon.A, s.gamesWon.B)}–${Math.min(s.gamesWon.A, s.gamesWon.B)}` : `${Math.max(s.a, s.b)}–${Math.min(s.a, s.b)}`;
+    if (st.status === 'completed') chipText = `<span class="w-badge" title="Winner">W</span> ${st.winnerTeam ? esc(st.winnerTeam.name) : ''} win ${finalLine}`;
+    else if (st.status === 'live' && s.goldenPoint) chipText = 'Golden point';
+    else if (st.status === 'live' && s.matchPoint) chipText = 'Match point';
+    else if (st.status === 'live' && s.gamePoint) chipText = 'Game point';
     else if (st.status === 'upcoming') chipText = `Starts ${fmtTime(m.start)}`;
     else if (st.status === 'waiting') chipText = 'Waiting for teams';
     chip.hidden = !chipText;
@@ -95,9 +101,28 @@ function init() {
 
     $('[data-announce]').textContent = st.status === 'live' || st.status === 'completed' ? `${nameA} ${s.a}, ${nameB} ${s.b}` : '';
 
+    $('[data-share]').hidden = !(st.status === 'completed' && st.winnerTeam);
+    lastState = st;
+    renderGames(st);
     renderSheet(s.rallies, nameA, nameB);
+    renderStats(st, nameA, nameB);
     renderDetails(st);
     renderScorer(st, nameA, nameB);
+  }
+
+  /** Games won and per-game scores beside the court (best-of-3 only). */
+  function renderGames(st) {
+    const box = $('[data-games]');
+    const s = st.score;
+    const show = m.format.bestOf > 1 && (st.status === 'live' || st.status === 'completed');
+    box.hidden = !show;
+    if (!show) return;
+    const chips = s.games.map((g, i) => {
+      const cur = !g.winner && st.status === 'live';
+      return `<li class="${cur ? 'is-current' : ''}"><span class="gm-label">Game ${i + 1}</span>
+        <span class="gm-score"><b class="${g.winner === 'A' ? 'w' : ''}">${g.a}</b><i>–</i><b class="${g.winner === 'B' ? 'w' : ''}">${g.b}</b></span></li>`;
+    }).join('');
+    box.innerHTML = `<div class="games-tally"><span class="gt-a">${s.gamesWon.A}</span><span class="gt-label">Games</span><span class="gt-b">${s.gamesWon.B}</span></div><ol class="games-list">${chips}</ol>`;
   }
 
   function renderSheet(rallies, nameA, nameB) {
@@ -106,34 +131,113 @@ function init() {
       sheet.innerHTML = '<p class="empty small">The rally-by-rally score appears here once play starts.</p>';
       return;
     }
+    // Split the rallies into games, then draw one paper-style row pair per game.
+    const games = [];
+    let cur = [];
     let a = 0;
     let b = 0;
-    // One column per rally; only the rally winner's row gets a number, like a paper score sheet.
-    const cols = rallies.map((side, i) => {
+    for (const side of rallies) {
+      cur.push(side);
       side === 'A' ? a++ : b++;
-      const col = i + 3;
-      return `<span class="c ca" style="grid-column:${col}">${side === 'A' ? a : ''}</span><span class="c cb" style="grid-column:${col}">${side === 'B' ? b : ''}</span>`;
-    });
-    sheet.innerHTML = `<div class="sheet-grid" style="--cols:${rallies.length + 1}">
-      <span class="sheet-name na" title="${esc(nameA)}">${esc(nameA)}</span>
-      <span class="sheet-name nb" title="${esc(nameB)}">${esc(nameB)}</span>
-      <span class="c ca zero" style="grid-column:2">0</span><span class="c cb zero" style="grid-column:2">0</span>
-      ${cols.join('')}
-    </div>`;
-    sheet.scrollLeft = sheet.scrollWidth;
+      const f = m.format;
+      if ((a >= f.target && a > b) || (b >= f.target && b > a)) { games.push(cur); cur = []; a = 0; b = 0; }
+    }
+    if (cur.length) games.push(cur);
+    const multi = m.format.bestOf > 1;
+    sheet.innerHTML = games.map((g, gi) => {
+      let x = 0;
+      let y = 0;
+      const cols = g.map((side, i) => {
+        side === 'A' ? x++ : y++;
+        const col = i + 3;
+        return `<span class="c ca" style="grid-column:${col}">${side === 'A' ? x : ''}</span><span class="c cb" style="grid-column:${col}">${side === 'B' ? y : ''}</span>`;
+      });
+      return `${multi ? `<p class="sheet-game">Game ${gi + 1}</p>` : ''}<div class="sheet-scroll"><div class="sheet-grid" style="--cols:${g.length + 1}">
+        <span class="sheet-name na" title="${esc(nameA)}">${esc(nameA)}</span>
+        <span class="sheet-name nb" title="${esc(nameB)}">${esc(nameB)}</span>
+        <span class="c ca zero" style="grid-column:2">0</span><span class="c cb zero" style="grid-column:2">0</span>
+        ${cols.join('')}
+      </div></div>`;
+    }).join('');
+    sheet.querySelectorAll('.sheet-scroll').forEach((el) => { el.scrollLeft = el.scrollWidth; });
+  }
+
+  /** Numbers worth knowing, all derived from the rally-by-rally record. */
+  function matchStats(rallies) {
+    const out = { A: { points: 0, run: 0, lead: 0, onServe: 0 }, B: { points: 0, run: 0, lead: 0, onServe: 0 }, leadChanges: 0 };
+    let server = EVENT.firstServer;
+    let run = 0;
+    let last = null;
+    let leader = null;
+    let a = 0;
+    let b = 0;
+    for (const side of rallies) {
+      out[side].points++;
+      if (side === server) out[side].onServe++;
+      run = side === last ? run + 1 : 1;
+      out[side].run = Math.max(out[side].run, run);
+      last = side;
+      server = side;
+      side === 'A' ? a++ : b++;
+      out.A.lead = Math.max(out.A.lead, a - b);
+      out.B.lead = Math.max(out.B.lead, b - a);
+      const now = a > b ? 'A' : b > a ? 'B' : leader;
+      if (leader && now !== leader) out.leadChanges++;
+      leader = now;
+      // a new game starts from 0–0
+      if ((a >= m.format.target && a > b) || (b >= m.format.target && b > a)) { a = 0; b = 0; leader = null; }
+    }
+    return out;
+  }
+
+  function renderStats(st, nameA, nameB) {
+    const panel = $('[data-stats-panel]');
+    const rallies = st.score.rallies;
+    panel.hidden = !rallies.length;
+    if (!rallies.length) return;
+    const x = matchStats(rallies);
+    const row = (label, key, hint) => {
+      const va = x.A[key];
+      const vb = x.B[key];
+      const total = Math.max(va + vb, 1);
+      return `<div class="stat" title="${hint}">
+        <span class="stat-v stat-a${va > vb ? ' is-more' : ''}">${va}</span>
+        <div class="stat-mid"><span class="stat-label">${label}</span>
+          <div class="stat-bar"><span class="sb-a" style="width:${(va / total) * 100}%"></span><span class="sb-b" style="width:${(vb / total) * 100}%"></span></div></div>
+        <span class="stat-v stat-b${vb > va ? ' is-more' : ''}">${vb}</span>
+      </div>`;
+    };
+    $('[data-stats]').innerHTML = `
+      <div class="stat-heads"><span class="sh-a">${esc(nameA)}</span><span class="sh-b">${esc(nameB)}</span></div>
+      ${row('Points', 'points', 'Total rallies won')}
+      ${row('Won on serve', 'onServe', 'Rallies won while serving')}
+      ${row('Longest run', 'run', 'Most points in a row')}
+      ${row('Biggest lead', 'lead', 'Largest gap in the score')}
+      <p class="stat-foot">${rallies.length} rallies played. ${x.leadChanges ? `The lead changed hands ${x.leadChanges} ${x.leadChanges === 1 ? 'time' : 'times'}.` : 'One team led throughout.'}</p>`;
   }
 
   function renderDetails(st) {
+    const won = (side) => st.status === 'completed' && st.score.winner === side;
+    const fromGroup = (side) => {
+      if (m.stage === 'league' || Object.keys(cat.groups).length === 1) return '';
+      const g = (side === 'A' ? st.a : st.b)?.group ?? m.from?.[side === 'A' ? 0 : 1]?.g;
+      return g ? `<b class="g-chip group-${g.toLowerCase()}" title="From group ${g}">${g}</b>` : '';
+    };
+    const team = (side) => `<span class="dt-team dt-team-${side.toLowerCase()}">${fromGroup(side)}${esc(teamLabel(st, side, { full: true }))}${won(side) ? '<span class="w-badge">W</span>' : ''}</span>`;
+    const stage = m.stage === 'league'
+      ? `<span class="stage-chip group-${m.group.toLowerCase()}"><b>${m.group}</b> Group ${m.group}, round ${m.round}</span>`
+      : `<span class="stage-chip stage-ko">${esc(stageLabel(m))}</span>`;
     const rows = [
-      ['Category', cat.name],
-      ['Stage', stageLabel(m)],
-      ['Court', `Court ${m.court}`],
-      ['Scheduled', `${fmtTime(m.start)}, ${EVENT.dateLabel}`],
-      ['Format', describeFormat(m.format)],
-      ['Match code', m.id],
+      ['Team 1', team('A')],
+      ['Team 2', team('B')],
+      ['Category', `<span class="cat-chip cat-chip-${cat.level.toLowerCase()}">${esc(cat.level)}</span> ${esc(cat.name.replace(`${cat.level} `, ''))}`],
+      ['Stage', stage],
+      ['Court', `<span class="court-chip">${m.court}</span> Court ${m.court}`],
+      ['Scheduled', `${fmtTime(m.start)}, ${esc(EVENT.dateLabel)}`],
+      ['Format', esc(describeFormat(m.format))],
+      ['Match code', `<code>${esc(m.id)}</code>`],
     ];
-    if (st.status === 'completed' && st.winnerTeam) rows.splice(2, 0, ['Winner', st.winnerTeam.name]);
-    $('[data-details]').innerHTML = rows.map(([k, v]) => `<div><dt>${k}</dt><dd>${esc(v)}</dd></div>`).join('');
+    $('[data-details]').innerHTML = rows.map(([k, v]) => `<div><dt>${k}</dt><dd>${v}</dd></div>`).join('');
   }
 
   let askingPasskey = false;
@@ -174,6 +278,29 @@ function init() {
       ? `${n} ${n === 1 ? 'match has' : 'matches have'} changes saved on this phone only. Download the results file and send it to the organizer to publish.`
       : `Everything on this phone matches the published results${pub ? ` (updated ${new Date(pub).toLocaleTimeString('en-IN', { hour: 'numeric', minute: '2-digit' })})` : ''}.`;
   }
+
+  let lastState = null;
+  $('[data-share]').addEventListener('click', () => {
+    const st = lastState;
+    if (!st || st.status !== 'completed') return;
+    const w = st.score.winner;
+    const winner = w === 'A' ? st.a : st.b;
+    const loser = w === 'A' ? st.b : st.a;
+    openShare({
+      category: cat.name.replace(`${cat.level} `, ''),
+      level: cat.level,
+      stage: stageLabel(m),
+      court: m.court,
+      winnerPlayers: winner.players,
+      loserPlayers: loser.players,
+      target: m.format.target,
+      winScore: m.format.bestOf > 1 ? st.score.gamesWon[w] : Math.max(st.score.a, st.score.b),
+      loseScore: m.format.bestOf > 1 ? st.score.gamesWon[w === 'A' ? 'B' : 'A'] : Math.min(st.score.a, st.score.b),
+      gameLine: m.format.bestOf > 1 ? st.score.games.map((g) => (w === 'A' ? `${g.a}–${g.b}` : `${g.b}–${g.a}`)).join(', ') : null,
+      bestOf: m.format.bestOf,
+      isFinal: m.stage === 'final',
+    }, `ThirdSpace-Play-${m.id}.png`);
+  });
 
   // Scorer actions
   const act = (fn) => { fn(); refresh(); };

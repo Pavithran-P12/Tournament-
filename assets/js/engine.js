@@ -1,86 +1,170 @@
-// Builds the fixture list, court schedule, standings and knockout bracket.
+// Builds the fixture list, court schedule, standings and knockout bracket from tournament-data.js.
 // Match results come from the scorers (published results file plus this device). The seeded
-// simulation below is only used by tests and previews (snapshot(..., { simulate: true })).
+// simulation is only used by tests and previews (snapshot(..., { simulate: true })).
 
-import { EVENT, CATEGORIES, GROUP_LETTERS, SEMIS, sampleTeams, rng } from './tournament-data.js?v=20261022g';
-import { FORMATS, summarize, gameWinner } from './scoring.js?v=20261022g';
+import { EVENT, CATEGORIES, KNOCKOUT_SLOTS, TEAMS, SAME_PERSON, rng } from './tournament-data.js?v=20261022w';
+import { FORMATS, summarize } from './scoring.js?v=20261022w';
 
-const ROUNDS = {
-  4: [[[0, 3], [1, 2]], [[0, 2], [1, 3]], [[0, 1], [2, 3]]],
-  3: [[[1, 2]], [[0, 2]], [[0, 1]]],
+/** Round-robin rounds (circle method). Odd group sizes get a bye each round. */
+export function roundRobin(n) {
+  const ids = Array.from({ length: n }, (_, i) => i);
+  if (n % 2) ids.push(null);
+  const m = ids.length;
+  const rounds = [];
+  for (let r = 0; r < m - 1; r++) {
+    const pairs = [];
+    for (let i = 0; i < m / 2; i++) {
+      const a = ids[i];
+      const b = ids[m - 1 - i];
+      if (a !== null && b !== null) pairs.push(r % 2 ? [b, a] : [a, b]);
+    }
+    rounds.push(pairs);
+    ids.splice(1, 0, ids.pop()); // rotate all but the first
+  }
+  return rounds;
+}
+
+/** "Nikish Anand Bala Thiruvalluvar" -> "Nikish A.B.T.", "D Britto Baskar" -> "D. Britto B." */
+export function shortName(full) {
+  const words = full.split(/\s+/).filter(Boolean);
+  const core = (w) => w.replace(/\./g, '');
+  const isInitials = (w) => core(w).length <= 3 && core(w) === core(w).toUpperCase();
+  const gi = words.findIndex((w) => core(w).length > 1 && !isInitials(w));
+  if (gi < 0) return full;
+  const letters = (ws) => ws.flatMap((w) => (isInitials(w) ? [...core(w)] : [core(w)[0].toUpperCase()]));
+  const before = letters(words.slice(0, gi));
+  const after = letters(words.slice(gi + 1));
+  return `${before.length ? `${before.join('.')}. ` : ''}${words[gi]}${after.length ? ` ${after.join('.')}.` : ''}`;
+}
+
+export const personKey = (name) => {
+  const k = name.toLowerCase().replace(/[^a-z ]/g, ' ').replace(/\s+/g, ' ').trim();
+  return SAME_PERSON[k] ?? k;
 };
+
+const KO = {
+  qf8: [
+    { id: 'QF1', stage: 'quarter', label: 'Quarter-final 1', from: [{ q: 1 }, { q: 8 }] },
+    { id: 'QF2', stage: 'quarter', label: 'Quarter-final 2', from: [{ q: 4 }, { q: 5 }] },
+    { id: 'QF3', stage: 'quarter', label: 'Quarter-final 3', from: [{ q: 2 }, { q: 7 }] },
+    { id: 'QF4', stage: 'quarter', label: 'Quarter-final 4', from: [{ q: 3 }, { q: 6 }] },
+    { id: 'SF1', stage: 'semi', label: 'Semi-final 1', from: [{ w: 'QF1' }, { w: 'QF2' }] },
+    { id: 'SF2', stage: 'semi', label: 'Semi-final 2', from: [{ w: 'QF3' }, { w: 'QF4' }] },
+    { id: 'F', stage: 'final', label: 'Final', from: [{ w: 'SF1' }, { w: 'SF2' }] },
+  ],
+  sf4: [
+    { id: 'SF1', stage: 'semi', label: 'Semi-final 1', from: [{ g: 'A', r: 1 }, { g: 'C', r: 1 }] },
+    { id: 'SF2', stage: 'semi', label: 'Semi-final 2', from: [{ g: 'B', r: 1 }, { g: 'D', r: 1 }] },
+    { id: 'F', stage: 'final', label: 'Final', from: [{ w: 'SF1' }, { w: 'SF2' }] },
+  ],
+  final2: [
+    { id: 'F', stage: 'final', label: 'Final', from: [{ g: 'A', r: 1 }, { g: 'A', r: 2 }] },
+  ],
+};
+
+const ORDINAL = ['', '1st', '2nd', '3rd', '4th', '5th', '6th'];
+export function refLabel(ref) {
+  if (ref.g) return ref.r === 1 ? `Group ${ref.g} winner` : `Group ${ref.g} runner-up`;
+  if (ref.q) return ref.q <= 6 ? `${ORDINAL[ref.q]} best group winner` : `${ref.q === 7 ? 'Best' : '2nd best'} runner-up`;
+  const n = ref.w.slice(2);
+  return ref.w.startsWith('QF') ? `Winner of quarter-final ${n}` : `Winner of semi-final ${n}`;
+}
 
 let cache = null;
 
 export function tournament() {
   if (cache) return cache;
-  const cats = CATEGORIES.map((c) => ({ ...c, teamsByGroup: sampleTeams(c) }));
   const teamIndex = {};
-  for (const c of cats) for (const g of Object.values(c.teamsByGroup)) for (const t of g) teamIndex[t.id] = t;
+  const cats = CATEGORIES.map((c) => {
+    const teamsByGroup = {};
+    for (const [letter, ids] of Object.entries(c.groups)) {
+      teamsByGroup[letter] = ids.map((id) => {
+        const players = TEAMS[id];
+        // name is the short form used in lists; fullName is shown on the match page.
+        const team = { id, players, name: `${shortName(players[0])} & ${shortName(players[1])}`, fullName: `${players[0]} & ${players[1]}`, cat: c.code, group: letter, entry: Number(id.slice(-2)), rating: rng(id)() };
+        teamIndex[id] = team;
+        return team;
+      });
+    }
+    return { ...c, teamsByGroup };
+  });
+  const people = (teamIds) => teamIds.flatMap((id) => TEAMS[id].map(personKey));
 
-  // League fixtures, ordered by round so every team gets rest between matches.
+  // League fixtures, ordered round by round so teams get rest between matches.
   const league = [];
-  for (let r = 0; r < 3; r++) {
+  // A group plays full round robin unless the draw fixed its pairings (Beginner Men's groups of 6).
+  const roundsFor = (c, letter, g) => c.pairings?.[letter] ?? roundRobin(g.length).map((rd) => rd.map(([i, j]) => [g[i].id, g[j].id]));
+  const maxRounds = Math.max(...cats.flatMap((c) => Object.entries(c.teamsByGroup).map(([l, g]) => roundsFor(c, l, g).length)));
+  for (let r = 0; r < maxRounds; r++) {
     for (const c of cats) {
-      for (const letter of Object.keys(c.teamsByGroup)) {
-        const g = c.teamsByGroup[letter];
-        for (const [i, j] of ROUNDS[g.length][r]) {
-          league.push({ cat: c.code, stage: 'league', group: letter, round: r + 1, a: g[i].id, b: g[j].id });
+      for (const [letter, g] of Object.entries(c.teamsByGroup)) {
+        for (const [a, b] of roundsFor(c, letter, g)[r] ?? []) {
+          league.push({ cat: c.code, stage: 'league', group: letter, round: r + 1, a, b, format: FORMATS.league });
         }
       }
     }
   }
-  const groupCounters = {};
+  const counters = {};
   for (const m of league) {
     const key = `${m.cat}-${m.group}`;
-    groupCounters[key] = (groupCounters[key] || 0) + 1;
-    m.id = `${key}-${String(groupCounters[key]).padStart(2, '0')}`;
-    m.format = FORMATS.league;
+    counters[key] = (counters[key] || 0) + 1;
+    m.id = `${key}-${String(counters[key]).padStart(2, '0')}`;
+    m.people = people([m.a, m.b]);
   }
 
-  // Court schedule: fill each slot with the next matches whose teams did not play in the previous slot.
+  // Court schedule: each slot takes the next matches whose players are free and did not play in the
+  // previous slot. Nobody is ever on two courts at once; rest is only relaxed if nothing else fits.
   const matches = [];
   const queue = league.slice();
   let slot = 0;
-  let prevTeams = new Set();
+  let prev = new Set();
   while (queue.length) {
     const start = EVENT.dayStart + slot * EVENT.leagueSlot;
-    const thisTeams = new Set();
-    let court = 1;
-    for (let i = 0; i < queue.length && court <= EVENT.courts; ) {
-      const m = queue[i];
-      const busy = [m.a, m.b].some((t) => prevTeams.has(t) || thisTeams.has(t));
-      if (busy) { i++; continue; }
-      queue.splice(i, 1);
-      Object.assign(m, { court: court++, start, end: start + EVENT.leagueSlot - 2 });
-      thisTeams.add(m.a); thisTeams.add(m.b);
-      matches.push(m);
+    const busy = new Set();
+    const placed = [];
+    for (const allowBackToBack of [false, true]) {
+      for (let i = 0; i < queue.length && placed.length < EVENT.courts; ) {
+        const m = queue[i];
+        if (m.people.some((p) => busy.has(p) || (!allowBackToBack && prev.has(p)))) { i++; continue; }
+        queue.splice(i, 1);
+        m.people.forEach((p) => busy.add(p));
+        placed.push(m);
+      }
+      if (placed.length) break;
     }
-    prevTeams = thisTeams;
+    placed.forEach((m, k) => Object.assign(m, { court: k + 1, start, end: start + EVENT.leagueSlot - 2 }));
+    matches.push(...placed);
+    prev = busy;
     slot++;
   }
   const leagueEnd = EVENT.dayStart + slot * EVENT.leagueSlot;
 
-  // Knockout: semi-finals then finals, all on a fixed timetable.
-  const ko = [];
-  for (const sf of SEMIS) for (const c of cats) ko.push({ id: `${c.code}-${sf.id}`, cat: c.code, stage: 'semi', label: sf.id === 'SF1' ? 'Semi-final 1' : 'Semi-final 2', from: [`${sf.a}1`, `${sf.b}1`] });
-  let k = 0;
-  for (const m of ko) {
-    const s = Math.floor(k / EVENT.courts);
-    const start = leagueEnd + 10 + s * EVENT.knockoutSlot;
-    Object.assign(m, { court: (k % EVENT.courts) + 1, start, end: start + EVENT.knockoutSlot - 2, format: FORMATS.knockout });
-    k++;
+  // Knockouts in the agreed running order.
+  const koById = {};
+  for (const c of cats) {
+    for (const k of KO[c.format]) {
+      const m = { ...k, id: `${c.code}-${k.id}`, cat: c.code, format: FORMATS.knockout };
+      m.fromLabels = m.from.map(refLabel);
+      koById[m.id] = m;
+    }
   }
-  const semisEnd = leagueEnd + 10 + Math.ceil(ko.length / EVENT.courts) * EVENT.knockoutSlot;
-  cats.forEach((c, i) => {
-    const start = semisEnd + 10;
-    ko.push({ id: `${c.code}-F`, cat: c.code, stage: 'final', label: 'Final', from: ['SF1', 'SF2'], court: i + 1, start, end: start + EVENT.knockoutSlot - 2, format: FORMATS.knockout });
+  const koStart = leagueEnd + 10;
+  KNOCKOUT_SLOTS.forEach((ids, s) => {
+    const start = koStart + s * EVENT.knockoutSlot;
+    ids.forEach((id, k) => Object.assign(koById[id], { court: k + 1, start, end: start + EVENT.knockoutSlot - 2 }));
   });
+  const ko = Object.values(koById);
+  if (ko.some((m) => m.start === undefined)) throw new Error('A knockout match is missing from KNOCKOUT_SLOTS');
   matches.push(...ko);
   matches.sort((x, y) => x.start - y.start || x.court - y.court);
 
+  const stageStart = (stage) => Math.min(...ko.filter((m) => m.stage === stage).map((m) => m.start));
   const byId = Object.fromEntries(matches.map((m) => [m.id, m]));
-  cache = { cats, matches, byId, teamIndex, leagueEnd, finalsStart: semisEnd + 10 };
+  cache = {
+    cats, matches, byId, teamIndex, leagueEnd,
+    stageStarts: { quarter: stageStart('quarter'), semi: stageStart('semi'), final: stageStart('final') }, // Infinity if a stage is not played
+    dayEnds: Math.max(...matches.map((m) => m.end)),
+  };
   return cache;
 }
 
@@ -88,7 +172,7 @@ export function category(code) {
   return tournament().cats.find((c) => c.code === code);
 }
 
-/** The full rally sequence a simulated match will follow, once its teams are known. */
+/** The full rally sequence a simulated match would follow (tests and previews only). */
 function sequenceFor(m, a, b) {
   const key = `${m.id}:${a.id}:${b.id}`;
   m._seq ??= {};
@@ -96,11 +180,7 @@ function sequenceFor(m, a, b) {
   const rand = rng(key);
   const p = 0.5 + (a.rating - b.rating) * 0.32;
   const sides = [];
-  let x = 0;
-  let y = 0;
-  while (!gameWinner(x, y, m.format)) {
-    if (rand() < p) { sides.push('A'); x++; } else { sides.push('B'); y++; }
-  }
+  while (!summarize(sides, m.format).winner) sides.push(rand() < p ? 'A' : 'B');
   m._seq[key] = sides;
   return sides;
 }
@@ -114,19 +194,22 @@ function sequenceFor(m, a, b) {
 export function snapshot(t, overrides = {}, { simulate = false } = {}) {
   const T = tournament();
   const states = {};
-  const resolveSlot = (m, ref) => {
-    if (m.stage === 'semi') {
-      const g = ref[0];
-      const table = standings(m.cat, g, states);
-      return table.complete ? T.teamIndex[table.rows[0].team.id] : null;
+  const resolve = (m, ref) => {
+    if (ref.g) {
+      const table = standings(m.cat, ref.g, states);
+      return table.complete ? T.teamIndex[table.rows[ref.r - 1].team.id] : null;
     }
-    const sfState = states[`${m.cat}-${ref}`];
-    return sfState && sfState.status === 'completed' ? sfState.winnerTeam : null;
+    if (ref.q) {
+      const q = qualifiers(m.cat, states);
+      return q.complete ? q.seeds[ref.q - 1].team : null;
+    }
+    const prior = states[`${m.cat}-${ref.w}`];
+    return prior && prior.status === 'completed' ? prior.winnerTeam : null;
   };
 
   for (const m of T.matches) {
-    const a = m.stage === 'league' ? T.teamIndex[m.a] : resolveSlot(m, m.from[0]);
-    const b = m.stage === 'league' ? T.teamIndex[m.b] : resolveSlot(m, m.from[1]);
+    const a = m.stage === 'league' ? T.teamIndex[m.a] : resolve(m, m.from[0]);
+    const b = m.stage === 'league' ? T.teamIndex[m.b] : resolve(m, m.from[1]);
     const st = { match: m, a, b, status: 'upcoming', score: summarize([], m.format, EVENT.firstServer) };
     const ov = overrides[m.id];
     if (ov && a && b) {
@@ -147,13 +230,15 @@ export function snapshot(t, overrides = {}, { simulate = false } = {}) {
         st.score = summarize(seq.slice(0, n), m.format, EVENT.firstServer);
       }
     } else if (t >= m.start && (!a || !b)) {
-      st.status = 'waiting'; // its slot has arrived but the teams are not decided yet
+      st.status = 'waiting';
     }
     if (st.status === 'completed' && st.score.winner) st.winnerTeam = st.score.winner === 'A' ? a : b;
     states[m.id] = st;
   }
   return states;
 }
+
+const byRecord = (x, y) => y.won - x.won || y.pd - x.pd || y.pf - x.pf;
 
 /**
  * Group table. Order: matches won, then head-to-head (two-way ties), then point difference,
@@ -162,7 +247,7 @@ export function snapshot(t, overrides = {}, { simulate = false } = {}) {
 export function standings(catCode, letter, states) {
   const cat = category(catCode);
   const teams = cat.teamsByGroup[letter];
-  const rows = teams.map((team) => ({ team, played: 0, won: 0, lost: 0, pf: 0, pa: 0 }));
+  const rows = teams.map((team) => ({ team, group: letter, played: 0, won: 0, lost: 0, pf: 0, pa: 0 }));
   const row = (id) => rows.find((r) => r.team.id === id);
   const groupMatches = tournament().matches.filter((m) => m.cat === catCode && m.stage === 'league' && m.group === letter);
   let done = 0;
@@ -185,7 +270,7 @@ export function standings(catCode, letter, states) {
     return winnerId === x ? -1 : 1;
   };
   rows.forEach((r) => (r.pd = r.pf - r.pa));
-  rows.sort((x, y) => y.won - x.won || y.pd - x.pd || y.pf - x.pf);
+  rows.sort(byRecord);
   // Re-apply head-to-head inside two-way ties on wins.
   for (let i = 0; i < rows.length - 1; i++) {
     const sameWins = rows.filter((r) => r.won === rows[i].won);
@@ -200,5 +285,24 @@ export function standings(catCode, letter, states) {
     r.tiedWithNext = !!next && next.won === r.won && next.pd === r.pd && next.pf === r.pf && rows.filter((q) => q.won === r.won).length > 2;
   });
   const complete = done === groupMatches.length;
-  return { letter, rows, complete, played: done, total: groupMatches.length, needsDecision: complete && rows[0].tiedWithNext };
+  const places = cat.format === 'final2' ? 2 : 1;
+  return {
+    letter, rows, complete, played: done, total: groupMatches.length,
+    needsDecision: complete && rows.slice(0, places).some((r) => r.tiedWithNext),
+  };
+}
+
+/**
+ * Quarter-final qualifiers for the qf8 format: the six group winners ranked by record, then the
+ * two best runners-up. Pairings are 1v8, 4v5, 2v7, 3v6; a runner-up never meets its own group winner.
+ */
+export function qualifiers(catCode, states) {
+  const cat = category(catCode);
+  const tables = Object.keys(cat.teamsByGroup).map((g) => standings(catCode, g, states));
+  const winners = tables.map((t) => t.rows[0]).sort(byRecord);
+  const runnersUp = tables.map((t) => t.rows[1]).sort(byRecord);
+  const seeds = [...winners, ...runnersUp.slice(0, 2)];
+  // seeds[6] meets seeds[1] (QF3) and seeds[7] meets seeds[0] (QF1).
+  if (seeds[7].group === seeds[0].group || seeds[6].group === seeds[1].group) [seeds[6], seeds[7]] = [seeds[7], seeds[6]];
+  return { complete: tables.every((t) => t.complete), seeds, runnersUp };
 }

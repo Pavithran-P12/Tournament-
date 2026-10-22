@@ -1,8 +1,8 @@
 // Shared page helpers: results data, scorer access, formatting and the page refresh loop.
 
-import { EVENT } from './tournament-data.js?v=20261022g';
-import { tournament, snapshot } from './engine.js?v=20261022g';
-import { replay } from './scoring.js?v=20261022g';
+import { EVENT } from './tournament-data.js?v=20261022w';
+import { tournament, snapshot } from './engine.js?v=20261022w';
+import { replay } from './scoring.js?v=20261022w';
 
 /* ---------- storage (best effort; the pages work without it) ---------- */
 function load(store, key, fallback) {
@@ -183,17 +183,15 @@ export function stageLabel(m) {
   if (m.stage === 'league') return `Group ${m.group}, round ${m.round}`;
   return m.label;
 }
-export function teamLabel(st, side) {
+export function teamLabel(st, side, { full = false } = {}) {
   const team = side === 'A' ? st.a : st.b;
-  if (team) return team.name;
-  const ref = st.match.from?.[side === 'A' ? 0 : 1] ?? '';
-  if (ref.startsWith('SF')) return `Winner of semi-final ${ref.slice(2)}`;
-  return `Winner of group ${ref[0]}`;
+  if (team) return full ? team.fullName : team.name;
+  return st.match.fromLabels?.[side === 'A' ? 0 : 1] ?? 'To be decided';
 }
 export function statusPill(st) {
   const map = {
     live: ['live', 'Live'],
-    completed: ['done', 'Final'],
+    completed: ['done', 'Result'],
     upcoming: ['next', fmtTime(st.match.start)],
     waiting: ['wait', 'Waiting for teams'],
   };

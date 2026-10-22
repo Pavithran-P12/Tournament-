@@ -1,7 +1,7 @@
-import { EVENT } from './tournament-data.js?v=20261022g';
-import { tournament, standings } from './engine.js?v=20261022g';
-import { mountDrawNotice, startLoop, markActiveNav, paintLiveCount, fmtTime, esc, matchHref } from './ui.js?v=20261022g';
-import { matchCard, emptyState } from './components.js?v=20261022g';
+import { EVENT } from './tournament-data.js?v=20261022w';
+import { tournament, standings } from './engine.js?v=20261022w';
+import { mountDrawNotice, startLoop, markActiveNav, paintLiveCount, fmtTime, esc, matchHref } from './ui.js?v=20261022w';
+import { matchCard, emptyState } from './components.js?v=20261022w';
 
 const $ = (s) => document.querySelector(s);
 const T = tournament();
@@ -9,11 +9,16 @@ const T = tournament();
 // Static content
 $('[data-rules]').innerHTML = EVENT.rules.map((r) => `<li>${esc(r)}</li>`).join('');
 $('[data-includes]').innerHTML = EVENT.includes.map((i) => `<li><strong>${esc(i.title)}</strong><span>${esc(i.detail)}</span></li>`).join('');
-const semis = T.matches.filter((m) => m.stage === 'semi');
+const finals = T.matches.filter((m) => m.stage === 'final').sort((x, y) => x.start - y.start);
+const finalTimes = [...new Set(finals.map((m) => m.start))].map((start) => {
+  const names = finals.filter((m) => m.start === start).map((m) => T.cats.find((c) => c.code === m.cat).short);
+  return `${names.join(' and ')} at ${fmtTime(start)}`;
+});
 $('[data-timeline]').innerHTML = [
-  ['League matches', `${fmtTime(EVENT.dayStart)} to ${fmtTime(T.leagueEnd)}`, 'Every team plays each team in its group.'],
-  ['Semi-finals', `From ${fmtTime(Math.min(...semis.map((m) => m.start)))}`, 'Group A winner plays group C winner. Group B winner plays group D winner.'],
-  ['Finals', `From ${fmtTime(T.finalsStart)}`, 'Trophies for the winner and runner-up in each category.'],
+  ['League matches', `${fmtTime(EVENT.dayStart)} to ${fmtTime(T.leagueEnd)}`, 'Every team plays 3 matches in its group.'],
+  ...(Number.isFinite(T.stageStarts.quarter) ? [['Quarter-finals', `From ${fmtTime(T.stageStarts.quarter)}`, "Beginner Men's."]] : []),
+  ['Semi-finals', `From ${fmtTime(T.stageStarts.semi)}`, "Men's and Mixed: group A winner v group C winner, group B winner v group D winner."],
+  ['Finals', `From ${fmtTime(T.stageStarts.final)}`, `${finalTimes.join('. ')}. Trophies for the winner and runner-up in each category.`],
 ].map(([t, when, what]) => `<li><span class="tl-when">${when}</span><strong>${t}</strong><span>${what}</span></li>`).join('');
 
 mountDrawNotice();
@@ -46,15 +51,16 @@ startLoop((states, clock) => {
   $('[data-cat-grid]').innerHTML = T.cats.map((c) => {
     const teams = Object.values(c.teamsByGroup).flat().length;
     const final = states[`${c.code}-F`];
+    const groupCount = Object.keys(c.teamsByGroup).length;
     const groupsDone = Object.keys(c.teamsByGroup).filter((g) => standings(c.code, g, states).complete).length;
     let progress;
     if (final.status === 'completed') progress = `<span class="cat-champ">Champions: ${esc(final.winnerTeam.name)}</span>`;
     else if (final.status === 'live') progress = '<span class="cat-live">Final in progress</span>';
-    else progress = `<span>${groupsDone} of ${c.groups.length} groups complete</span>`;
+    else progress = `<span>${groupsDone} of ${groupCount} ${groupCount === 1 ? 'group' : 'groups'} complete</span>`;
     return `<a class="cat-card" href="matches.html?cat=${c.code}">
       <span class="cat-level cat-level-${c.level.toLowerCase()}">${c.level}</span>
       <strong class="cat-name">${esc(c.name.replace(`${c.level} `, ''))}</strong>
-      <span class="cat-meta">${teams} teams in ${c.groups.length} groups</span>
+      <span class="cat-meta">${teams} teams in ${Object.keys(c.teamsByGroup).length} ${Object.keys(c.teamsByGroup).length === 1 ? 'group' : 'groups'}</span>
       <span class="cat-progress">${progress}</span>
     </a>`;
   }).join('');
