@@ -1,8 +1,8 @@
-import { EVENT } from './tournament-data.js?v=20261025c';
-import { tournament, standings, category } from './engine.js?v=20261025c';
-import { mountDrawNotice, startLoop, markActiveNav, paintLiveCount, fmtTime, esc, matchHref, dayPlanHtml, sessionFor, sessionSpan, teamJourney, currentStates } from './ui.js?v=20261025c';
-import { openTeamShare } from './share.js?v=20261025c';
-import { matchCard, matchRow, emptyState } from './components.js?v=20261025c';
+import { EVENT } from './tournament-data.js?v=20261025d';
+import { tournament, standings, category } from './engine.js?v=20261025d';
+import { mountDrawNotice, startLoop, markActiveNav, paintLiveCount, fmtTime, esc, matchHref, dayPlanHtml, sessionFor, sessionSpan, teamJourney, currentStates } from './ui.js?v=20261025d';
+import { openTeamShare } from './share.js?v=20261025d';
+import { matchCard, matchRow, emptyState } from './components.js?v=20261025d';
 
 const $ = (s) => document.querySelector(s);
 const T = tournament();

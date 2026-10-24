@@ -36,7 +36,7 @@ export const EVENT = {
   firstServer: 'A',
   includes: [
     { title: 'Yonex Mavis 350', detail: 'Nylon shuttles for every match' },
-    { title: 'Refreshments', detail: 'Through the day at the venue' },
+    { title: 'Refreshments', detail: 'Provided at the venue' },
     { title: 'Trophies', detail: 'Winner and runner-up in every category' },
   ],
   // Official rules from the organizer (24 Oct), then the eligibility and conduct rules from the poster.
