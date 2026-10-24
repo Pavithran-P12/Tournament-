@@ -11,7 +11,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Big+Shoulders+Display:wght@600;800;900&family=Caveat:wght@600;700&family=Figtree:wght@400;500;600;700&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="assets/css/styles.css?v=20261025b">
+  <link rel="stylesheet" href="assets/css/styles.css?v=20261025c">
 </head>
 <body class="page-privacy">
   <header class="site-header">
@@ -30,7 +30,7 @@
       <div class="wrap">
         <p class="privacy-kicker">ThirdSpace Play · Badminton Tournament</p>
         <h1>Privacy</h1>
-        <p class="privacy-lede">Short version: player names are shown only to run the tournament. We do not collect contact details, there are no accounts, no cookies and no tracking.</p>
+        <p class="privacy-lede">Short version: player names are shown only to run the tournament. We do not collect contact details, there are no accounts, no cookies and no tracking, just an anonymous visit count.</p>
         <p class="privacy-date">Last updated 24 October 2026</p>
       </div>
     </section>
@@ -47,8 +47,12 @@
         </article>
         <article>
           <h2>No accounts, cookies or tracking</h2>
-          <p>There is nothing to sign up for. The site sets no cookies and uses no analytics, ads or tracking pixels.</p>
-          <p>A few settings stay in your own browser only, never sent anywhere: scores a scorer has entered but not yet published, whether scoring is unlocked on that tab, and a note that you already sent feedback.</p>
+          <p>There is nothing to sign up for. The site sets no cookies and uses no analytics, ads or tracking pixels, only an anonymous visit count.</p>
+          <p>A few settings stay in your own browser only, never sent anywhere: scores a scorer has entered but not yet published, whether scoring is unlocked on that tab, and a note that you already sent feedback. The visit counter's random ID is the only thing sent (see below).</p>
+        </article>
+        <article>
+          <h2>Visit counter</h2>
+          <p>The footer shows how many visits the site has had. Each browser gets a random ID that stays on that device, and it is counted at most once a day. Only that random ID, the date and the page path are stored, in our database at <a href="https://supabase.com/privacy" target="_blank" rel="noopener">Supabase</a>. No name, IP address or other personal detail is kept.</p>
         </article>
         <article>
           <h2>Feedback form</h2>
@@ -87,11 +91,13 @@
           <span class="made-site">pavithranm.in</span>
         </a>
         </div>
+        <p class="visits" data-visits hidden><span aria-hidden="true">👀</span> <strong data-visits-n></strong> visits</p>
         <p class="copyright">© 2026 P12 · <a href="privacy.html">Privacy</a></p>
       </div>
     </div>
   </footer>
 
-  <script type="module" src="assets/js/feedback.js?v=20261025b"></script>
+  <script type="module" src="assets/js/feedback.js?v=20261025c"></script>
+  <script type="module" src="assets/js/visits.js?v=20261025c"></script>
 </body>
 </html>

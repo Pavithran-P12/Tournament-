@@ -43,7 +43,7 @@ The schedule is built automatically on 5 courts (14-minute league slots, 35-minu
 ## Cache versions
 
 Every CSS/JS link carries `?v=<version>` so phones never mix old and new files. After changing any CSS or JS, bump it everywhere:
-`sed -i 's/?v=20261025b/?v=NEWVERSION/g' *.html assets/js/*.js`
+`sed -i 's/?v=20261025c/?v=NEWVERSION/g' *.html assets/js/*.js`
 
 ## Format rules in the code
 

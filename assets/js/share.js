@@ -1,8 +1,8 @@
 // Builds a shareable result card sized for Instagram Stories (1080 x 1920 PNG, 9:16) for a finished match and opens a preview
 // with Share (phones that support sharing files) and Download buttons.
 
-import { EVENT } from './tournament-data.js?v=20261025b';
-import { rng } from './tournament-data.js?v=20261025b';
+import { EVENT } from './tournament-data.js?v=20261025c';
+import { rng } from './tournament-data.js?v=20261025c';
 
 const W = 1080;
 const H = 1920;

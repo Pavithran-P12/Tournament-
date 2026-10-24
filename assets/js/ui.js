@@ -1,8 +1,8 @@
 // Shared page helpers: results data, scorer access, formatting and the page refresh loop.
 
-import { EVENT } from './tournament-data.js?v=20261025b';
-import { tournament, snapshot, standings } from './engine.js?v=20261025b';
-import { replay } from './scoring.js?v=20261025b';
+import { EVENT } from './tournament-data.js?v=20261025c';
+import { tournament, snapshot, standings } from './engine.js?v=20261025c';
+import { replay } from './scoring.js?v=20261025c';
 
 /* ---------- storage (best effort; the pages work without it) ---------- */
 function load(store, key, fallback) {

@@ -959,3 +959,6 @@ p { margin: 0; }
 .insta-pill:hover { box-shadow: 0 0 0 5px rgba(139, 76, 246, .45); }
 .insta-glyph { flex: none; }
 .insta-pill { box-shadow: 0 0 0 3px rgba(139, 76, 246, .35); }
+.visits { display: inline-flex; align-items: center; gap: 6px; font-size: 14px; color: var(--muted); }
+.visits strong { color: var(--line); font-variant-numeric: tabular-nums; }
+.visits[hidden] { display: none; }

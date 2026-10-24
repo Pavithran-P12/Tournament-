@@ -1,12 +1,12 @@
-import { EVENT } from './tournament-data.js?v=20261025b';
-import { tournament, category } from './engine.js?v=20261025b';
-import { describeFormat, replay, gameScores } from './scoring.js?v=20261025b';
+import { EVENT } from './tournament-data.js?v=20261025c';
+import { tournament, category } from './engine.js?v=20261025c';
+import { describeFormat, replay, gameScores } from './scoring.js?v=20261025c';
 import {
   mountDrawNotice, startLoop, markActiveNav, paintLiveCount, fmtTime, esc,
   stageLabel, statusPill, teamLabel, recordFor, saveLocalScore, deleteScore,
   isScorer, checkPasskey, lockScorer, downloadResults, pendingChanges, publishedInfo, sessionFor, sessionSpan, reportBy,
-} from './ui.js?v=20261025b';
-import { openShare } from './share.js?v=20261025b';
+} from './ui.js?v=20261025c';
+import { openShare } from './share.js?v=20261025c';
 
 const $ = (s) => document.querySelector(s);
 const T = tournament();
