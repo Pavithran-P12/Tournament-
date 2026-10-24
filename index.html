@@ -11,7 +11,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Big+Shoulders+Display:wght@600;800;900&family=Caveat:wght@600;700&family=Figtree:wght@400;500;600;700&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="assets/css/styles.css?v=20261025e">
+  <link rel="stylesheet" href="assets/css/styles.css?v=20261025f">
 </head>
 <body class="page-home">
   <header class="site-header">
@@ -54,7 +54,7 @@
           <div><dt>Venue</dt><dd>Rapid Sports Academy, Perungudi, Chennai</dd></div>
         </dl>
         <div class="hero-actions">
-          <a class="btn btn-live" href="matches.html?status=live" data-hero-live>Watch live scores</a>
+          <a class="btn btn-live" href="#on-court" data-hero-live>Watch live scores</a>
           <a class="btn btn-ghost" href="matches.html">See all fixtures</a>
         </div>
         <p class="hero-status" data-day-status aria-live="polite"></p>
@@ -66,11 +66,7 @@
       </div>
     </section>
 
-    <section class="band band-plan" aria-label="Day plan">
-      <div class="wrap" data-day-plan></div>
-    </section>
-
-    <section class="band band-court" aria-labelledby="live-title">
+    <section class="band band-court" id="on-court" aria-labelledby="live-title">
       <div class="wrap">
         <div class="section-head">
           <h2 id="live-title">On court now</h2>
@@ -80,6 +76,10 @@
         <h3 class="sub-head">Up next in each category</h3>
         <ol class="next-list" data-next-list></ol>
       </div>
+    </section>
+
+    <section class="band band-plan" aria-label="Day plan">
+      <div class="wrap" data-day-plan></div>
     </section>
 
     <section class="band band-paper" id="categories" aria-labelledby="cat-title">
@@ -188,8 +188,8 @@
     </div>
   </footer>
 
-  <script type="module" src="assets/js/home.js?v=20261025e"></script>
-  <script type="module" src="assets/js/feedback.js?v=20261025e"></script>
-  <script type="module" src="assets/js/visits.js?v=20261025e"></script>
+  <script type="module" src="assets/js/home.js?v=20261025f"></script>
+  <script type="module" src="assets/js/feedback.js?v=20261025f"></script>
+  <script type="module" src="assets/js/visits.js?v=20261025f"></script>
 </body>
 </html>

@@ -1,6 +1,6 @@
-import { esc, fmtTime, matchHref, stageLabel, statusPill, teamLabel, matchCode } from './ui.js?v=20261025e';
-import { category } from './engine.js?v=20261025e';
-import { gameScores } from './scoring.js?v=20261025e';
+import { esc, fmtTime, matchHref, stageLabel, statusPill, teamLabel, matchCode } from './ui.js?v=20261025f';
+import { category } from './engine.js?v=20261025f';
+import { gameScores } from './scoring.js?v=20261025f';
 
 /** Compact match card used on the home page and in the match center. */
 export function matchCard(st, { showCategory = true } = {}) {

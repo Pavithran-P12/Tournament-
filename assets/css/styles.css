@@ -964,3 +964,8 @@ p { margin: 0; }
 .visits { display: inline-flex; align-items: center; gap: 6px; font-size: 14px; color: var(--muted); }
 .visits strong { color: var(--line); font-variant-numeric: tabular-nums; }
 .visits[hidden] { display: none; }
+
+/* jump from the hero button to "On court now", clear of the sticky header */
+html { scroll-behavior: smooth; }
+#on-court { scroll-margin-top: 72px; }
+@media (prefers-reduced-motion: reduce) { html { scroll-behavior: auto; } }
