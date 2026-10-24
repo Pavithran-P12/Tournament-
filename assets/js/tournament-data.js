@@ -71,10 +71,10 @@ export const CATEGORIES = [
       D: [[['BMD-19', 'BMD-24'], ['BMD-20', 'BMD-23'], ['BMD-21', 'BMD-22']], [['BMD-19', 'BMD-23'], ['BMD-24', 'BMD-22'], ['BMD-20', 'BMD-21']], [['BMD-19', 'BMD-22'], ['BMD-23', 'BMD-21'], ['BMD-24', 'BMD-20']], [['BMD-19', 'BMD-21'], ['BMD-22', 'BMD-20'], ['BMD-23', 'BMD-24']], [['BMD-19', 'BMD-20'], ['BMD-21', 'BMD-24'], ['BMD-22', 'BMD-23']]],
     } },
   { code: 'BWD', name: "Beginner Women's Doubles", short: "Beginner Women's", level: 'Beginner', format: 'final2', startAt: 9 * 60, numbered: true,
-    groups: { A: ['BWD-01', 'BWD-02', 'BWD-03', 'BWD-04', 'BWD-05'] },
-    // Organizer's fixture sheet (24 Oct): full round robin, matches 1-10 in this order, 2 per round (one team rests).
+    groups: { A: ['BWD-01', 'BWD-02', 'BWD-03', 'BWD-04', 'BWD-05', 'BWD-06'] },
+    // Organizer's fixture sheet (24 Oct, evening): 6 teams, full round robin, matches 1-15 in this order, 3 per round.
     pairings: {
-      A: [[['BWD-01', 'BWD-02'], ['BWD-03', 'BWD-04']], [['BWD-01', 'BWD-03'], ['BWD-02', 'BWD-05']], [['BWD-01', 'BWD-04'], ['BWD-03', 'BWD-05']], [['BWD-01', 'BWD-05'], ['BWD-02', 'BWD-04']], [['BWD-02', 'BWD-03'], ['BWD-04', 'BWD-05']]],
+      A: [[['BWD-01', 'BWD-06'], ['BWD-02', 'BWD-05'], ['BWD-03', 'BWD-04']], [['BWD-01', 'BWD-05'], ['BWD-06', 'BWD-04'], ['BWD-02', 'BWD-03']], [['BWD-01', 'BWD-04'], ['BWD-05', 'BWD-03'], ['BWD-06', 'BWD-02']], [['BWD-01', 'BWD-03'], ['BWD-04', 'BWD-02'], ['BWD-05', 'BWD-06']], [['BWD-01', 'BWD-02'], ['BWD-03', 'BWD-06'], ['BWD-04', 'BWD-05']]],
     } },
   { code: 'IMD', name: "Intermediate Men's Doubles", short: "Intermediate Men's", level: 'Intermediate', format: 'qf', startAt: 10 * 60 + 45, minCourts: 1, numbered: true,
     groups: { A: ['IMD-01', 'IMD-02', 'IMD-03', 'IMD-04', 'IMD-05'], B: ['IMD-06', 'IMD-07', 'IMD-08', 'IMD-09', 'IMD-10'], C: ['IMD-11', 'IMD-12', 'IMD-13', 'IMD-14', 'IMD-15'], D: ['IMD-16', 'IMD-17', 'IMD-18', 'IMD-19', 'IMD-20'] },
@@ -162,7 +162,8 @@ export const TEAMS = {
   'BWD-02': ["Gowri Arjunan", "Shanthi Narasimharao"],
   'BWD-03': ["Prathiba Ramesh Kumar", "Diya Ravishankar"],
   'BWD-04': ["Sangeetha PK", "Lakshmi Chaganti"],
-  'BWD-05': ["Nithila Rajesh", "Navyaa Dhivakar"],
+  'BWD-05': ["SeemaFirdaus", "Shubashini Govindarajan"],
+  'BWD-06': ["Suganthi V", "T Vidya"],
 };
 
 // Different spellings of the same person across categories (lower case), so the

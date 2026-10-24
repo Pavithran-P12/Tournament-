@@ -2,8 +2,8 @@
 // Match results come from the scorers (published results file plus this device). The seeded
 // simulation is only used by tests and previews (snapshot(..., { simulate: true })).
 
-import { EVENT, CATEGORIES, TEAMS, SAME_PERSON, rng } from './tournament-data.js?v=20261025a';
-import { FORMATS, summarize } from './scoring.js?v=20261025a';
+import { EVENT, CATEGORIES, TEAMS, SAME_PERSON, rng } from './tournament-data.js?v=20261025b';
+import { FORMATS, summarize } from './scoring.js?v=20261025b';
 
 /** Round-robin rounds (circle method). Odd group sizes get a bye each round. */
 export function roundRobin(n) {

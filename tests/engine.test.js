@@ -31,7 +31,7 @@ test('the draw uses every entered team exactly once', () => {
   assert.deepEqual(Object.values(count('BMD').groups).map((g) => g.length), [6, 6, 6, 6]);
   assert.deepEqual(Object.values(count('IMD').groups).map((g) => g.length), [5, 5, 5, 5]);
   assert.deepEqual(Object.values(count('IXD').groups).map((g) => g.length), [4, 4, 4, 4]);
-  assert.deepEqual(Object.values(count('BWD').groups).map((g) => g.length), [5]);
+  assert.deepEqual(Object.values(count('BWD').groups).map((g) => g.length), [6]);
 });
 
 test('every team plays everyone in its group once', () => {
@@ -115,12 +115,13 @@ test("league matches carry the organizer's match numbers", () => {
   assert.deepEqual([no('IMD', 40).a, no('IMD', 40).b], ['IMD-19', 'IMD-20']);
   assert.equal(T.matches.filter((m) => m.cat === 'BMD' && m.no).length, 60);
   assert.equal(T.matches.filter((m) => m.cat === 'IMD' && m.no).length, 40);
-  assert.deepEqual([no('BWD', 4).a, no('BWD', 4).b], ['BWD-02', 'BWD-05']);
+  assert.deepEqual([no('BWD', 1).a, no('BWD', 1).b], ['BWD-01', 'BWD-06']);
+  assert.deepEqual([no('BWD', 9).a, no('BWD', 9).b], ['BWD-06', 'BWD-02']);
   assert.deepEqual([no('IXD', 1).a, no('IXD', 1).b], ['IXD-01', 'IXD-04']);
   assert.deepEqual([no('IXD', 10).a, no('IXD', 10).b], ['IXD-08', 'IXD-06']);
   assert.deepEqual([no('IXD', 24).a, no('IXD', 24).b], ['IXD-15', 'IXD-16']);
   assert.equal(T.matches.filter((m) => m.cat === 'IXD' && m.no).length, 24);
-  assert.deepEqual([no('BWD', 10).a, no('BWD', 10).b], ['BWD-04', 'BWD-05']);
+  assert.deepEqual([no('BWD', 15).a, no('BWD', 15).b], ['BWD-04', 'BWD-05']);
 });
 
 test('quarter-finals are one game to 21, semi-finals and finals best of 3', () => {
@@ -162,7 +163,7 @@ test("Beginner Women's final is 1st v 2nd of the single group", () => {
 
 test('group tables add up, including groups of 5 and 6', () => {
   const s = all();
-  for (const [code, g, n, total] of [['IMD', 'A', 5, 10], ['IMD', 'D', 5, 10], ['IXD', 'B', 4, 6], ['BMD', 'B', 6, 15], ['BMD', 'D', 6, 15], ['BWD', 'A', 5, 10]]) {
+  for (const [code, g, n, total] of [['IMD', 'A', 5, 10], ['IMD', 'D', 5, 10], ['IXD', 'B', 4, 6], ['BMD', 'B', 6, 15], ['BMD', 'D', 6, 15], ['BWD', 'A', 6, 15]]) {
     const t = standings(code, g, s);
     assert.equal(t.rows.length, n);
     assert.equal(t.total, total);
