@@ -14,18 +14,20 @@ Website for the ThirdSpace Play Badminton Tournament (Sunday 25 October 2026, Ra
 
 Match codes: `<category>-<group>-<number>` for league matches (for example `BWD-C-03`), `<category>-SF1`, `<category>-SF2` and `<category>-F` for the knockout.
 
-## Scoring and publishing results
+## Scoring and live results
+
+Scores are live. They are stored in a Supabase table (`tsp_scores`, one row per match holding its rally sequence such as `AABAB`).
 
 1. On a match page, tap **Score this match** and enter the scorer passkey (ask the organizer). Scoring stays unlocked until the browser tab is closed or **Lock** is tapped.
-2. Points are saved on that phone as they are entered. **Undo last point** and **Delete this match's scores** are recorded the same way.
-3. Tap **Download results file**. It contains every match scored on that phone plus the results already published.
-4. Replace `data/results.json` in this repo with the downloaded file, then commit and push. GitHub Pages republishes in a minute or two, and open pages re-read the file every 60 seconds.
+2. Tap the team that won each rally. Every tap is sent straight away, and every open page picks it up within about 5 seconds. **Undo last point**, **Confirm result**, the court picker and **Delete this match's scores** sync the same way.
+3. The scorer panel shows **✓ Live for everyone** when everything has been sent. If the phone loses internet, points are kept on the phone and sent automatically when it reconnects. Keep the page open until it shows the tick.
 
-If several scorers use different phones, collect each file and publish one at a time, waiting for each one to go live before the next scorer downloads (their phone then includes it). A shared live backend (planned) removes this step.
+Several scorers can score different matches on different phones at the same time.
 
-**About the passkey:** only a salted SHA-256 hash is stored in `assets/js/ui.js`, so the passkey itself is not in this public repo. The check runs in the browser, so it keeps casual visitors out but is not real security. To change it, run
-`node -e "console.log(require('crypto').createHash('sha256').update('tsp-scorer:NEWPASSKEY').digest('hex'))"`
-and paste the result into `PASS_HASH`.
+**Security:** anyone can read the scores. Writing needs the passkey, which is checked inside the database through `tsp_save_score` / `tsp_delete_score` (security definer functions). Only a bcrypt hash of the passkey is stored, in a private schema the public key cannot read, and it is not in this repo. The page uses only the Supabase publishable key, which is meant to be public. To change the passkey, run this in the Supabase SQL editor:
+`update tsp_private.scorer_key set pass_hash = extensions.crypt('NEWPASSKEY', extensions.gen_salt('bf', 10));`
+
+**Backup:** **Download backup file** saves every score on that phone as a results file. If Supabase were ever unavailable, replace `data/results.json` with it and push; the pages also read that file.
 
 ## The draw and formats
 
@@ -43,7 +45,7 @@ The schedule is built automatically on 5 courts (14-minute league slots, 35-minu
 ## Cache versions
 
 Every CSS/JS link carries `?v=<version>` so phones never mix old and new files. After changing any CSS or JS, bump it everywhere:
-`sed -i 's/?v=20261025d/?v=NEWVERSION/g' *.html assets/js/*.js`
+`sed -i 's/?v=20261025e/?v=NEWVERSION/g' *.html assets/js/*.js`
 
 ## Format rules in the code
 

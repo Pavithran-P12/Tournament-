@@ -1,12 +1,12 @@
-import { EVENT } from './tournament-data.js?v=20261025d';
-import { tournament, category } from './engine.js?v=20261025d';
-import { describeFormat, replay, gameScores } from './scoring.js?v=20261025d';
+import { EVENT } from './tournament-data.js?v=20261025e';
+import { tournament, category } from './engine.js?v=20261025e';
+import { describeFormat, replay, gameScores } from './scoring.js?v=20261025e';
 import {
   mountDrawNotice, startLoop, markActiveNav, paintLiveCount, fmtTime, esc,
   stageLabel, statusPill, teamLabel, recordFor, saveLocalScore, deleteScore,
-  isScorer, checkPasskey, lockScorer, downloadResults, pendingChanges, publishedInfo, sessionFor, sessionSpan, reportBy,
-} from './ui.js?v=20261025d';
-import { openShare } from './share.js?v=20261025d';
+  isScorer, checkPasskey, lockScorer, downloadResults, pendingChanges, liveInfo, sessionFor, sessionSpan, reportBy,
+} from './ui.js?v=20261025e';
+import { openShare } from './share.js?v=20261025e';
 
 const $ = (s) => document.querySelector(s);
 const T = tournament();
@@ -280,10 +280,13 @@ function init() {
            <button type="button" class="btn btn-live" data-confirm>Confirm result</button>`;
     }
     const n = pendingChanges();
-    const pub = publishedInfo().updated;
-    $('[data-pending]').textContent = n
-      ? `${n} ${n === 1 ? 'match has' : 'matches have'} changes saved on this phone only. Download the results file and send it to the organizer to publish.`
-      : `Everything on this phone matches the published results${pub ? ` (updated ${new Date(pub).toLocaleTimeString('en-IN', { hour: 'numeric', minute: '2-digit' })})` : ''}.`;
+    const lv = liveInfo();
+    const at = (d) => d.toLocaleTimeString('en-IN', { hour: 'numeric', minute: '2-digit' });
+    const box = $('[data-pending]');
+    box.className = n ? 'sync-wait' : lv.ok ? 'sync-ok' : 'sync-wait';
+    box.textContent = n
+      ? `${n} ${n === 1 ? 'match is' : 'matches are'} waiting to go live${lv.error ? ' (no connection)' : ''}. Keep this page open; it sends automatically when the internet is back.`
+      : lv.ok ? `✓ Live for everyone · synced ${at(lv.at)}` : 'Connecting to live scores…';
   }
 
   let lastState = null;

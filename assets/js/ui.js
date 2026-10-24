@@ -1,8 +1,8 @@
 // Shared page helpers: results data, scorer access, formatting and the page refresh loop.
 
-import { EVENT } from './tournament-data.js?v=20261025d';
-import { tournament, snapshot, standings } from './engine.js?v=20261025d';
-import { replay } from './scoring.js?v=20261025d';
+import { EVENT } from './tournament-data.js?v=20261025e';
+import { tournament, snapshot, standings } from './engine.js?v=20261025e';
+import { replay } from './scoring.js?v=20261025e';
 
 /* ---------- storage (best effort; the pages work without it) ---------- */
 function load(store, key, fallback) {
@@ -35,12 +35,23 @@ export function venueNow() {
   return { date, minutes, phase };
 }
 
-/* ---------- results: published file + this device's scoring ---------- */
-// data/results.json is the published copy everyone sees. Scores entered on this device are
-// kept locally until the scorer downloads a new results file and the organizer publishes it.
+/* ---------- results: published file + live scores + this device's scoring ---------- */
+// Scores go live through Supabase: a scorer's phone sends each match's rally sequence ("AABAB...")
+// as points are tapped, and every open page checks for changes every few seconds.
+// Anyone can read the scores; only the scorer passkey can write them, and that check runs in the
+// database, not here. data/results.json stays as an offline fallback and a manual backup route.
+// The key below is Supabase's publishable key, which is designed to be public.
+const SB_URL = 'https://wxlpbefrbxxbosjfeudk.supabase.co/rest/v1';
+const SB_KEY = 'sb_publishable_N9SO6zdvGjgfggBDqfzjtA_es8fc9eU';
+const SB_HEADERS = { apikey: SB_KEY, 'Content-Type': 'application/json' };
+const LIVE_EVERY = 5000; // ms between checks for new scores
+
 const LOCAL_KEY = 'tsp-scores-v1';
 let published = { updated: null, matches: {} };
 let publishedLoaded = false;
+let remote = {}; // match id -> record from the live table
+let remoteSeen = null; // newest updated_at received
+const live = { ok: false, at: null, error: null };
 
 export async function loadPublished() {
   try {
@@ -58,6 +69,33 @@ export async function loadPublished() {
   publishedLoaded = true;
   return published;
 }
+
+const sidesToEvents = (sides) => [...sides].map((side, i) => ({ id: `r${i + 1}`, type: 'point', side }));
+
+/** New or changed live scores since the last check (with a small overlap so nothing is missed). */
+export async function loadRemote() {
+  try {
+    let q = `${SB_URL}/tsp_scores?select=match_id,sides,confirmed,court,deleted,updated_at&order=updated_at.asc`;
+    if (remoteSeen) q += `&updated_at=gte.${encodeURIComponent(new Date(Date.parse(remoteSeen) - 15000).toISOString())}`;
+    const res = await fetch(q, { headers: { apikey: SB_KEY }, cache: 'no-store' });
+    if (!res.ok) throw new Error(`live scores ${res.status}`);
+    const rows = await res.json();
+    for (const r of rows) {
+      const cur = remote[r.match_id];
+      if (cur && cur.updatedAt >= r.updated_at) continue; // already have this (or a newer one we just sent)
+      remote[r.match_id] = { events: sidesToEvents(r.sides), confirmed: r.confirmed, court: r.court, deleted: r.deleted, updatedAt: r.updated_at };
+      if (!remoteSeen || r.updated_at > remoteSeen) remoteSeen = r.updated_at;
+    }
+    live.ok = true;
+    live.at = new Date();
+    live.error = null;
+  } catch (e) {
+    live.ok = false;
+    live.error = e.message;
+  }
+}
+export const liveInfo = () => ({ ...live });
+
 /** Once the published file contains this device's changes, they no longer count as pending. */
 function pruneLocal() {
   const all = localScores();
@@ -80,18 +118,63 @@ export function saveLocalScore(id, rec) {
   const all = localScores();
   all[id] = { ...rec, updatedAt: new Date().toISOString() };
   save(local(), LOCAL_KEY, all);
+  pushPending();
 }
-/** Deleting leaves a marker so the published score is hidden on this device and left out of the next download. */
+/** Deleting leaves a marker so the score is removed everywhere once it syncs. */
 export function deleteScore(id) {
   saveLocalScore(id, { deleted: true, events: [] });
 }
 
-/** Merged view: this device's changes on top of the published file. */
+/* Sending this phone's changes to the live table, one at a time, oldest first. */
+let pushing = false;
+async function rpc(name, body) {
+  const res = await fetch(`${SB_URL}/rpc/${name}`, { method: 'POST', headers: SB_HEADERS, body: JSON.stringify(body) });
+  const json = await res.json().catch(() => null);
+  if (!res.ok) {
+    const err = new Error(json?.message || `request failed (${res.status})`);
+    err.badKey = json?.code === '28000' || /passkey/.test(json?.message || '');
+    throw err;
+  }
+  return json;
+}
+export async function pushPending() {
+  const key = scorerKey();
+  if (pushing || !key) return;
+  pushing = true;
+  try {
+    const T = tournament();
+    const entries = Object.entries(localScores()).sort((a, b) => (a[1].updatedAt || '').localeCompare(b[1].updatedAt || ''));
+    for (const [id, rec] of entries) {
+      const m = T.byId[id];
+      if (!m) continue;
+      let ts;
+      if (rec.deleted) {
+        ts = await rpc('tsp_delete_score', { p_passkey: key, p_match_id: id });
+      } else {
+        const sides = replay(rec.events || [], m.format).rallies.join('');
+        ts = await rpc('tsp_save_score', { p_passkey: key, p_match_id: id, p_sides: sides, p_confirmed: !!rec.confirmed, p_court: rec.court || null });
+      }
+      remote[id] = { events: rec.events || [], confirmed: !!rec.confirmed, court: rec.court || null, deleted: !!rec.deleted, updatedAt: ts };
+      const now = localScores();
+      if (now[id]?.updatedAt === rec.updatedAt) { delete now[id]; save(local(), LOCAL_KEY, now); }
+    }
+    live.error = null;
+  } catch (e) {
+    if (e.badKey) lockScorer(); // passkey changed: ask again
+    live.error = e.message;
+  } finally {
+    pushing = false;
+  }
+}
+
+/** Merged view: published file, then live scores, then this phone's unsent changes. */
 export function mergedRecords() {
   const out = { ...published.matches };
-  for (const [id, rec] of Object.entries(localScores())) {
-    if (rec.deleted) delete out[id];
-    else out[id] = rec;
+  for (const src of [remote, localScores()]) {
+    for (const [id, rec] of Object.entries(src)) {
+      if (rec.deleted) delete out[id];
+      else out[id] = rec;
+    }
   }
   return out;
 }
@@ -149,21 +232,28 @@ export function currentStates() {
 }
 
 /* ---------- scorer passkey ---------- */
-// Only a salted SHA-256 hash is stored here, never the passkey itself.
-// This keeps casual visitors out; it is not server-side security (see README).
-const PASS_HASH = '89160e92f57e7ebb2ed3191d7a68ac6c499bc9a16f270b16b719752784abf9a8';
-const UNLOCK_KEY = 'tsp-scorer-unlocked';
+// The passkey is checked by the database (only a bcrypt hash is stored there), never in this code.
+// While unlocked it is kept for this tab only, so score updates can be sent with it.
+const UNLOCK_KEY = 'tsp-scorer-key';
 
 export async function checkPasskey(input) {
-  if (!crypto?.subtle) throw new Error('This browser cannot check the passkey. Open the site over https.');
-  const data = new TextEncoder().encode(`tsp-scorer:${input}`);
-  const digest = await crypto.subtle.digest('SHA-256', data);
-  const hex = [...new Uint8Array(digest)].map((b) => b.toString(16).padStart(2, '0')).join('');
-  const ok = hex === PASS_HASH;
-  if (ok) save(session(), UNLOCK_KEY, true);
-  return ok;
+  let ok;
+  try {
+    ok = await rpc('tsp_check_passkey', { p_passkey: input });
+  } catch {
+    throw new Error('Could not check the passkey. Check your internet connection and try again.');
+  }
+  if (ok === true) {
+    save(session(), UNLOCK_KEY, input);
+    pushPending();
+  }
+  return ok === true;
 }
-export const isScorer = () => load(session(), UNLOCK_KEY, false) === true;
+const scorerKey = () => {
+  const k = load(session(), UNLOCK_KEY, null);
+  return typeof k === 'string' && k ? k : null;
+};
+export const isScorer = () => !!scorerKey();
 export function lockScorer() {
   try { sessionStorage.removeItem(UNLOCK_KEY); } catch { /* ignore */ }
 }
@@ -282,7 +372,7 @@ export function startLoop(render) {
   const tick = (force = false) => {
     const states = currentStates();
     // Re-render only when something visible changed.
-    const sig = Object.values(states).map((s) => `${s.status}${s.score.a}-${s.score.b}`).join('|') + venueNow().minutes;
+    const sig = Object.values(states).map((s) => `${s.status}${s.score.a}-${s.score.b}${s.court || ''}`).join('|') + venueNow().minutes + `|${pendingChanges()}|${live.ok}|${live.error}`;
     if (force || sig !== last) {
       last = sig;
       render(states, venueNow());
@@ -290,8 +380,18 @@ export function startLoop(render) {
   };
   tick(true);
   loadPublished().then(() => tick(true));
+  loadRemote().then(() => tick(true));
+  pushPending();
   setInterval(tick, 2000);
-  setInterval(() => loadPublished().then(() => tick()), 60000); // pick up newly published results
+  const poll = () => {
+    if (document.visibilityState !== 'visible') return; // no checks while the tab is in the background
+    loadRemote().then(() => tick());
+    pushPending();
+  };
+  setInterval(poll, LIVE_EVERY);
+  document.addEventListener('visibilitychange', poll);
+  window.addEventListener('online', poll);
+  setInterval(() => loadPublished().then(() => tick()), 300000); // fallback file, rarely changes
   window.addEventListener('storage', () => tick(true)); // scoring in another tab on this device
   return () => tick(true);
 }

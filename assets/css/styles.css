@@ -472,6 +472,8 @@ p { margin: 0; }
 .field input:focus-visible { border-color: var(--team-a); }
 .form-error { color: #ff8fb5; font-size: 14px; font-weight: 600; }
 .publish-box { display: grid; gap: 10px; justify-items: start; padding-top: 12px; border-top: 1px solid var(--edge); font-size: 14px; color: var(--muted); }
+.publish-box .sync-ok { color: #4ade80; font-weight: 700; }
+.publish-box .sync-wait { color: #f6c453; font-weight: 600; }
 
 /* ---------- group tables: per-team fixtures ---------- */
 .th-hint { font-weight: 400; font-size: 11px; color: var(--muted); opacity: .8; margin-left: 4px; }
