@@ -1,8 +1,8 @@
 // Builds a shareable result card sized for Instagram Stories (1080 x 1920 PNG, 9:16) for a finished match and opens a preview
 // with Share (phones that support sharing files) and Download buttons.
 
-import { EVENT } from './tournament-data.js?v=20261024w';
-import { rng } from './tournament-data.js?v=20261024w';
+import { EVENT } from './tournament-data.js?v=20261025a';
+import { rng } from './tournament-data.js?v=20261025a';
 
 const W = 1080;
 const H = 1920;
@@ -138,6 +138,110 @@ function shuttleArt(ctx) {
   ctx.restore();
 }
 
+
+/* ---------- champion artwork: gold and black, a CHAMPS tag, crown and a WINNER sticker ---------- */
+/** Gold-on-black background for champion cards, replacing the green slab. */
+function championBackground(ctx, edgeL, edgeR) {
+  ctx.fillStyle = '#0b0b0a';
+  ctx.fillRect(0, 0, W, H);
+  const slab = new Path2D();
+  slab.moveTo(0, 0); slab.lineTo(W, 0); slab.lineTo(W, edgeR); slab.lineTo(0, edgeL); slab.closePath();
+  const g = ctx.createLinearGradient(0, 0, W, edgeL);
+  g.addColorStop(0, '#2a210b');
+  g.addColorStop(0.55, '#14110a');
+  g.addColorStop(1, '#0d1f1a');
+  ctx.fillStyle = g;
+  ctx.fill(slab);
+  ctx.save();
+  ctx.clip(slab);
+  ctx.translate(W - 60, -40);
+  for (let i = 0; i < 18; i++) {
+    ctx.rotate(Math.PI / 36);
+    ctx.fillStyle = i % 2 ? 'rgba(243,195,80,.05)' : 'rgba(243,195,80,.02)';
+    ctx.beginPath(); ctx.moveTo(0, 0); ctx.lineTo(-2400, 120); ctx.lineTo(-2400, 260); ctx.closePath(); ctx.fill();
+  }
+  ctx.restore();
+  ctx.save();
+  ctx.translate(W / 2 + 60, edgeL - 230);
+  ctx.rotate(-0.12);
+  ctx.font = `900 330px ${DISPLAY}`;
+  ctx.textAlign = 'center';
+  ctx.lineWidth = 10;
+  ctx.strokeStyle = 'rgba(243,195,80,.10)';
+  ctx.strokeText('CHAMPS', 0, 0);
+  ctx.fillStyle = 'rgba(243,195,80,.05)';
+  ctx.fillText('CHAMPS', 0, 0);
+  ctx.restore();
+  const edge = (offset, width, color) => {
+    ctx.beginPath();
+    ctx.moveTo(0, edgeL + offset); ctx.lineTo(W, edgeR + offset);
+    ctx.lineTo(W, edgeR + offset + width); ctx.lineTo(0, edgeL + offset + width); ctx.closePath();
+    ctx.fillStyle = color;
+    ctx.fill();
+  };
+  edge(0, 6, '#ec3d7a');
+}
+
+/** A tilted WINNER sticker with tape. */
+function winnerTag(ctx, x, y, text = 'WINNER') {
+  ctx.save();
+  ctx.translate(x, y);
+  ctx.rotate(-0.14);
+  ctx.font = `900 64px ${DISPLAY}`;
+  const tw = ctx.measureText(text).width + 6 * text.length;
+  const w = tw + 120;
+  const h = 104;
+  ctx.shadowColor = 'rgba(0,0,0,.55)';
+  ctx.shadowBlur = 24;
+  ctx.shadowOffsetY = 10;
+  roundRect(ctx, -w / 2, -h / 2, w, h, 16);
+  ctx.fillStyle = '#ec3d7a';
+  ctx.fill();
+  ctx.shadowColor = 'transparent';
+  ctx.lineWidth = 5;
+  ctx.strokeStyle = '#fff';
+  roundRect(ctx, -w / 2 + 9, -h / 2 + 9, w - 18, h - 18, 11);
+  ctx.stroke();
+  const star = (cx, cy, r) => {
+    ctx.beginPath();
+    for (let i = 0; i < 10; i++) {
+      const a = -Math.PI / 2 + (i * Math.PI) / 5;
+      const rr = i % 2 ? r * 0.45 : r;
+      ctx.lineTo(cx + Math.cos(a) * rr, cy + Math.sin(a) * rr);
+    }
+    ctx.closePath();
+    ctx.fillStyle = '#f3c350';
+    ctx.fill();
+  };
+  star(-w / 2 + 38, 0, 17);
+  star(w / 2 - 38, 0, 17);
+  ctx.fillStyle = '#fff';
+  spaced(ctx, text, 0, 22, 6, 'center');
+  ctx.fillStyle = 'rgba(255,248,220,.72)';
+  ctx.save(); ctx.translate(-w / 2 + 10, -h / 2 + 4); ctx.rotate(-0.7); ctx.fillRect(-36, -12, 72, 24); ctx.restore();
+  ctx.save(); ctx.translate(w / 2 - 10, h / 2 - 4); ctx.rotate(-0.7); ctx.fillRect(-36, -12, 72, 24); ctx.restore();
+  ctx.restore();
+}
+
+/** Simple gold crown, left-aligned at x with its base at y. */
+function crown(ctx, x, y, s) {
+  ctx.save();
+  ctx.fillStyle = '#f3c350';
+  ctx.beginPath();
+  ctx.moveTo(x, y);
+  ctx.lineTo(x, y - s * 0.55);
+  ctx.lineTo(x + s * 0.25, y - s * 0.25);
+  ctx.lineTo(x + s * 0.5, y - s * 0.7);
+  ctx.lineTo(x + s * 0.75, y - s * 0.25);
+  ctx.lineTo(x + s, y - s * 0.55);
+  ctx.lineTo(x + s, y);
+  ctx.closePath();
+  ctx.fill();
+  for (const cx of [0, 0.5, 1]) { ctx.beginPath(); ctx.arc(x + cx * s, y - (cx === 0.5 ? s * 0.72 : s * 0.58), s * 0.08, 0, Math.PI * 2); ctx.fill(); }
+  ctx.fillRect(x, y + s * 0.06, s, s * 0.12);
+  ctx.restore();
+}
+
 /** Logo, THIRDSPACE PLAY and the tournament line, inside the top safe zone. */
 async function drawHeader(ctx) {
   const logo = await loadImage('assets/img/thirdspace-logo.png');
@@ -169,20 +273,38 @@ function drawFooter(ctx) {
   ctx.textAlign = 'right';
   ctx.fillText('Sunday 25 October 2026', W - M, line1);
   ctx.textAlign = 'left';
-  // Instagram glyph + handle, vertically centred with the pill below
-  const igY = FOOT + 104;
-  ctx.save();
-  ctx.strokeStyle = C.line;
-  ctx.lineWidth = 3;
-  roundRect(ctx, M, igY - 26, 32, 32, 9);
-  ctx.stroke();
-  ctx.beginPath(); ctx.arc(M + 16, igY - 10, 7, 0, Math.PI * 2); ctx.stroke();
-  ctx.fillStyle = C.line;
-  ctx.beginPath(); ctx.arc(M + 25, igY - 19, 2.2, 0, Math.PI * 2); ctx.fill();
-  ctx.restore();
-  ctx.font = `700 26px ${BODY}`;
-  ctx.fillStyle = C.line;
-  ctx.fillText('@thirdspace_by_losh', M + 46, igY);
+  // Instagram pill (left), matching the created-by pill on the right
+  {
+    const handle = '@thirdspace_by_losh';
+    ctx.font = `900 26px ${DISPLAY}`;
+    const hw = ctx.measureText(handle).width + 1.5 * handle.length;
+    const ph = 52;
+    const pw = 22 + 30 + 12 + hw + 24;
+    const px = M;
+    const py = FOOT + 94 - ph / 2;
+    roundRect(ctx, px, py, pw, ph, ph / 2);
+    ctx.fillStyle = C.line;
+    ctx.fill();
+    // gradient Instagram glyph
+    const gx = px + 22;
+    const gy = py + 11;
+    const g = ctx.createLinearGradient(gx, gy + 30, gx + 30, gy);
+    g.addColorStop(0, '#f9a23b');
+    g.addColorStop(0.5, '#ec3d7a');
+    g.addColorStop(1, '#8b4cf6');
+    ctx.save();
+    ctx.strokeStyle = g;
+    ctx.lineWidth = 3.2;
+    roundRect(ctx, gx, gy, 30, 30, 9);
+    ctx.stroke();
+    ctx.beginPath(); ctx.arc(gx + 15, gy + 15, 6.8, 0, Math.PI * 2); ctx.stroke();
+    ctx.fillStyle = '#ec3d7a';
+    ctx.beginPath(); ctx.arc(gx + 23.5, gy + 6.5, 2.2, 0, Math.PI * 2); ctx.fill();
+    ctx.restore();
+    ctx.fillStyle = C.court;
+    ctx.font = `900 26px ${DISPLAY}`;
+    spaced(ctx, handle, gx + 30 + 12, py + 35, 1.5);
+  }
 
   // Created-by pill, right-aligned in the footer
   const parts = { a: 'Created with', b: 'by', c: 'P12', d: 'pavithranm.in' };
@@ -268,10 +390,10 @@ export async function buildResultImage(info) {
   // the edge rises to the right, so leave room for it under the right end of the names
   const edgeL = Math.min(Math.max(blockBottom + 200, 1150), 1250);
   const edgeR = edgeL - 110;
-  background(ctx, edgeL, edgeR);
-  shuttleArt(ctx);
-
+  if (info.isFinal) championBackground(ctx, edgeL, edgeR, info.winnerPlayers.join());
+  else { background(ctx, edgeL, edgeR); shuttleArt(ctx); }
   await drawHeader(ctx);
+  if (info.isFinal) winnerTag(ctx, W - M - 150, SAFE_TOP + 268);
 
   // Category row
   const rowY = SAFE_TOP + 270;
@@ -290,9 +412,8 @@ export async function buildResultImage(info) {
   ctx.font = `600 22px ${BODY}`;
   ctx.fillText(info.court ? `${info.stage}   |   Court ${info.court}` : info.stage, M, rowY + 44);
 
-  // Winners label
-  ctx.fillStyle = C.win;
-  ctx.fillRect(M, labelY - 13, 46, 5);
+  // Winners label (a crown for champions)
+  if (info.isFinal) { crown(ctx, M, labelY + 2, 46); ctx.fillStyle = C.amber; } else { ctx.fillStyle = C.win; ctx.fillRect(M, labelY - 13, 46, 5); }
   ctx.font = `800 26px ${BODY}`;
   spaced(ctx, info.isFinal ? 'CHAMPIONS' : 'WINNERS', M + 62, labelY, 6);
 
@@ -314,46 +435,68 @@ export async function buildResultImage(info) {
     for (const line of lines) { ctx.fillText(line, M, y); y += lineH; }
   });
 
-  // Score: winner solid, opponent outlined
   const scoreBase = Math.min(edgeR + 120 + 260, FOOT - 70);
-  ctx.font = `900 250px ${DISPLAY}`;
-  const ws = String(info.winScore);
-  const ls = String(info.loseScore);
-  ctx.fillStyle = C.win;
-  ctx.fillText(ws, M - 8, scoreBase);
-  const wsW = ctx.measureText(ws).width;
-  ctx.save();
-  ctx.translate(M + wsW + 30, scoreBase - 100);
-  ctx.rotate(0.35);
-  ctx.fillStyle = 'rgba(238,243,239,.35)';
-  ctx.fillRect(-4, -80, 8, 160);
-  ctx.restore();
-  ctx.lineWidth = 4;
-  ctx.strokeStyle = 'rgba(238,243,239,.75)';
-  ctx.strokeText(ls, M + wsW + 70, scoreBase);
-  const scoreRight = M + wsW + 70 + ctx.measureText(ls).width;
-
-  // Score caption, to the right of the numbers
-  const capX = scoreRight + 44;
-  const multi = info.bestOf > 1;
-  const cap1 = multi ? 'Games won' : 'Rally scoring';
-  const cap2 = multi ? info.gameLine : `Single game to ${info.target}`;
-  ctx.font = `600 24px ${BODY}`;
-  const capW = Math.max(ctx.measureText(cap1).width, ctx.measureText(cap2).width);
-  if (capX + capW <= W - M) {
+  const multi = info.bestOf > 1 && info.games?.length;
+  if (multi) {
+    // Best of 3: every game's points, big, side by side (winners' points solid, opponents' outlined).
+    const n = info.games.length;
+    const gap = 56;
+    const blockW = (W - 2 * M - gap * (n - 1)) / n;
+    const texts = info.games.map(([a, b]) => `${a}/${b}`);
+    const size = fitLines(ctx, texts, 900, DISPLAY, n === 1 ? 250 : 210, 90, blockW);
+    const base = Math.min(scoreBase + 40 - (250 - size) * 0.35, FOOT - 60);
+    ctx.font = `700 20px ${BODY}`;
+    ctx.fillStyle = C.muted;
+    const wonA = info.games.filter(([a, b]) => a > b).length;
+    spaced(ctx, `FINAL SCORE  ·  WON ${wonA}–${n - wonA} IN GAMES`, M, base - size * 0.8 - 64, 4);
+    info.games.forEach(([a, b], k) => {
+      const x = M + k * (blockW + gap);
+      ctx.font = `800 18px ${BODY}`;
+      ctx.fillStyle = C.muted;
+      spaced(ctx, `GAME ${k + 1}`, x + 4, base - size * 0.8 - 18, 3);
+      ctx.font = `900 ${size}px ${DISPLAY}`;
+      const won = a > b;
+      const sa = String(a);
+      ctx.fillStyle = won ? (info.isFinal ? C.amber : C.win) : C.line;
+      ctx.fillText(sa, x - 4, base);
+      const aw = ctx.measureText(sa).width;
+      // slanted divider
+      ctx.save();
+      ctx.translate(x + aw + size * 0.12, base - size * 0.38);
+      ctx.rotate(0.35);
+      ctx.fillStyle = 'rgba(238,243,239,.35)';
+      ctx.fillRect(-3, -size * 0.32, 6, size * 0.64);
+      ctx.restore();
+      ctx.lineWidth = Math.max(3, size / 60);
+      ctx.strokeStyle = 'rgba(238,243,239,.75)';
+      ctx.strokeText(String(b), x + aw + size * 0.26, base);
+    });
+  } else {
+    // Single game: winners' points solid, opponents' outlined, caption beside.
+    ctx.font = `900 250px ${DISPLAY}`;
+    const ws = String(info.winScore);
+    const ls = String(info.loseScore);
+    ctx.fillStyle = info.isFinal ? C.amber : C.win;
+    ctx.fillText(ws, M - 8, scoreBase);
+    const wsW = ctx.measureText(ws).width;
+    ctx.save();
+    ctx.translate(M + wsW + 30, scoreBase - 100);
+    ctx.rotate(0.35);
+    ctx.fillStyle = 'rgba(238,243,239,.35)';
+    ctx.fillRect(-4, -80, 8, 160);
+    ctx.restore();
+    ctx.lineWidth = 4;
+    ctx.strokeStyle = 'rgba(238,243,239,.75)';
+    ctx.strokeText(ls, M + wsW + 70, scoreBase);
+    const capX = M + wsW + 70 + ctx.measureText(ls).width + 44;
     ctx.textAlign = 'left';
     ctx.font = `700 20px ${BODY}`;
     ctx.fillStyle = C.muted;
     spaced(ctx, 'FINAL SCORE', capX, scoreBase - 150, 4);
     ctx.font = `600 24px ${BODY}`;
     ctx.fillStyle = C.line;
-    ctx.fillText(cap1, capX, scoreBase - 110);
-    ctx.fillText(cap2, capX, scoreBase - 76);
-  } else if (multi) {
-    // not enough room beside the numbers: put the game scores underneath
-    ctx.font = `600 26px ${BODY}`;
-    ctx.fillStyle = C.line;
-    ctx.fillText(`Games  ${info.gameLine}`, M, scoreBase + 50);
+    ctx.fillText('Rally scoring', capX, scoreBase - 110);
+    ctx.fillText(`Single game to ${info.target}`, capX, scoreBase - 76);
   }
 
   drawFooter(ctx);
@@ -388,9 +531,11 @@ export async function buildTeamImage(info) {
   const standY = name2Y + 30 + 48;
   const summaryY = standY + 40;
   const edgeL = summaryY + 70;
-  background(ctx, edgeL, edgeL - 80);
-  shuttleArt(ctx);
+  const champ = info.standing === 'Champions';
+  if (champ) championBackground(ctx, edgeL, edgeL - 80, info.players.join());
+  else { background(ctx, edgeL, edgeL - 80); shuttleArt(ctx); }
   await drawHeader(ctx);
+  if (champ) winnerTag(ctx, W - M - 150, rowY - 6);
 
   // Category row
   ctx.font = `800 20px ${BODY}`;
@@ -406,10 +551,9 @@ export async function buildTeamImage(info) {
   spaced(ctx, info.category.toUpperCase(), M + lvlW + 18, rowY, 1.5);
 
   // Label + names
-  ctx.fillStyle = C.win;
-  ctx.fillRect(M, labelY - 12, 46, 5);
+  if (champ) { crown(ctx, M, labelY + 4, 44); ctx.fillStyle = C.amber; } else { ctx.fillStyle = C.win; ctx.fillRect(M, labelY - 12, 46, 5); }
   ctx.font = `800 22px ${BODY}`;
-  spaced(ctx, 'TOURNAMENT JOURNEY', M + 62, labelY, 5);
+  spaced(ctx, champ ? 'CHAMPIONS JOURNEY' : 'TOURNAMENT JOURNEY', M + 62, labelY, 5);
   ctx.font = `900 ${size}px ${DISPLAY}`;
   ctx.fillStyle = C.line;
   ctx.fillText(names[0], M, name1Y);

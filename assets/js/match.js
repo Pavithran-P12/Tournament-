@@ -1,12 +1,12 @@
-import { EVENT } from './tournament-data.js?v=20261024w';
-import { tournament, category } from './engine.js?v=20261024w';
-import { describeFormat, replay, gameScores } from './scoring.js?v=20261024w';
+import { EVENT } from './tournament-data.js?v=20261025a';
+import { tournament, category } from './engine.js?v=20261025a';
+import { describeFormat, replay, gameScores } from './scoring.js?v=20261025a';
 import {
   mountDrawNotice, startLoop, markActiveNav, paintLiveCount, fmtTime, esc,
   stageLabel, statusPill, teamLabel, recordFor, saveLocalScore, deleteScore,
   isScorer, checkPasskey, lockScorer, downloadResults, pendingChanges, publishedInfo, sessionFor, sessionSpan, reportBy,
-} from './ui.js?v=20261024w';
-import { openShare } from './share.js?v=20261024w';
+} from './ui.js?v=20261025a';
+import { openShare } from './share.js?v=20261025a';
 
 const $ = (s) => document.querySelector(s);
 const T = tournament();
@@ -304,6 +304,7 @@ function init() {
       winScore: m.format.bestOf > 1 ? st.score.gamesWon[w] : Math.max(st.score.a, st.score.b),
       loseScore: m.format.bestOf > 1 ? st.score.gamesWon[w === 'A' ? 'B' : 'A'] : Math.min(st.score.a, st.score.b),
       gameLine: m.format.bestOf > 1 ? st.score.games.map((g) => (w === 'A' ? `${g.a}–${g.b}` : `${g.b}–${g.a}`)).join(', ') : null,
+      games: m.format.bestOf > 1 ? st.score.games.filter((g) => g.a || g.b).map((g) => (w === 'A' ? [g.a, g.b] : [g.b, g.a])) : null,
       bestOf: m.format.bestOf,
       isFinal: m.stage === 'final',
     }, `ThirdSpace-Play-${m.id}.png`);

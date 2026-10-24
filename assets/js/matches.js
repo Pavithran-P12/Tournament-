@@ -1,8 +1,8 @@
-import { EVENT } from './tournament-data.js?v=20261024w';
-import { tournament, standings, category } from './engine.js?v=20261024w';
-import { mountDrawNotice, startLoop, markActiveNav, paintLiveCount, fmtTime, esc, matchHref, dayPlanHtml, sessionFor, sessionSpan, teamJourney, currentStates } from './ui.js?v=20261024w';
-import { openTeamShare } from './share.js?v=20261024w';
-import { matchCard, matchRow, emptyState } from './components.js?v=20261024w';
+import { EVENT } from './tournament-data.js?v=20261025a';
+import { tournament, standings, category } from './engine.js?v=20261025a';
+import { mountDrawNotice, startLoop, markActiveNav, paintLiveCount, fmtTime, esc, matchHref, dayPlanHtml, sessionFor, sessionSpan, teamJourney, currentStates } from './ui.js?v=20261025a';
+import { openTeamShare } from './share.js?v=20261025a';
+import { matchCard, matchRow, emptyState } from './components.js?v=20261025a';
 
 const $ = (s) => document.querySelector(s);
 const T = tournament();
@@ -122,9 +122,11 @@ function paintJourney() {
       <span class="jr-res jr-${x.outcome.toLowerCase()}">${x.score ? `<b>${esc(x.score)}</b>` : ''}<em>${pill}</em>${x.detail ? `<small>${esc(x.detail)}</small>` : ''}</span>
     </a></li>`;
   };
+  journeyDialog.classList.toggle('is-champion', j.standing === 'Champions');
   journeyDialog.innerHTML = `
     <div class="share-head"><h2>Team journey</h2><button type="button" class="btn btn-text" data-journey-close>Close</button></div>
     <p class="jr-cat">${esc(j.cat.name)}</p>
+    ${j.standing === 'Champions' ? '<div class="jr-champ"><span class="winner-tag">★ Winner ★</span><span class="cb-crown" aria-hidden="true">👑</span></div>' : ''}
     <h3 class="jr-team">${esc(j.team.players[0])} <span>&amp;</span> ${esc(j.team.players[1])}</h3>
     <p class="jr-standing jr-tone-${j.tone}">${esc(j.standing)}</p>
     <p class="jr-summary">${esc(j.summary)}</p>
@@ -228,14 +230,14 @@ function knockoutView(states) {
   return cats.map((c) => {
     const ko = T.matches.filter((m) => m.cat === c.code && m.stage !== 'league');
     const f = states[`${c.code}-F`];
-    const champ = f.status === 'completed' ? f.winnerTeam.name : null;
+    const champ = f.status === 'completed' ? f.winnerTeam : null;
     const cols = STAGES.filter(([stage]) => ko.some((m) => m.stage === stage)).map(([stage, title]) => `<div class="br-col br-${stage}"><h3>${title}</h3>${ko
       .filter((m) => m.stage === stage).sort((x, y) => x.id.localeCompare(y.id)).map((m) => matchCard(states[m.id], { showCategory: false })).join('')}</div>`);
     return `<section class="cat-block">
       <h2 class="cat-block-title">${esc(c.name)}</h2>
       <div class="bracket bracket-${cols.length + 1}">
         ${cols.join('')}
-        <div class="br-col br-champ"><h3>Champions</h3><div class="champ${champ ? ' is-set' : ''}">${champ ? esc(champ) : 'Decided in the final'}</div></div>
+        <div class="br-col br-champ"><h3>Champions</h3>${champ ? `<div class="champ is-set champ-banner"><span class="winner-tag">★ Winner ★</span><span class="cb-crown" aria-hidden="true">👑</span><span class="cb-label">Champions</span><span class="cb-names">${esc(champ.players[0])}<i>&amp;</i>${esc(champ.players[1])}</span><button type="button" class="btn cb-journey" data-journey="${champ.id}">See their journey</button></div>` : '<div class="champ">Decided in the final</div>'}</div>
       </div>
     </section>`;
   }).join('');

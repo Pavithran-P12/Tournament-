@@ -1,7 +1,7 @@
-import { EVENT } from './tournament-data.js?v=20261024w';
-import { tournament, standings } from './engine.js?v=20261024w';
-import { mountDrawNotice, startLoop, markActiveNav, paintLiveCount, fmtTime, esc, matchHref, dayPlanHtml, sessionSpan } from './ui.js?v=20261024w';
-import { matchCard, emptyState } from './components.js?v=20261024w';
+import { EVENT } from './tournament-data.js?v=20261025a';
+import { tournament, standings } from './engine.js?v=20261025a';
+import { mountDrawNotice, startLoop, markActiveNav, paintLiveCount, fmtTime, esc, matchHref, dayPlanHtml, sessionSpan } from './ui.js?v=20261025a';
+import { matchCard, emptyState } from './components.js?v=20261025a';
 
 const $ = (s) => document.querySelector(s);
 const T = tournament();
