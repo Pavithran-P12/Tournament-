@@ -2,8 +2,8 @@
 // Match results come from the scorers (published results file plus this device). The seeded
 // simulation is only used by tests and previews (snapshot(..., { simulate: true })).
 
-import { EVENT, CATEGORIES, TEAMS, SAME_PERSON, rng } from './tournament-data.js?v=20261024l';
-import { FORMATS, summarize } from './scoring.js?v=20261024l';
+import { EVENT, CATEGORIES, TEAMS, SAME_PERSON, rng } from './tournament-data.js?v=20261024w';
+import { FORMATS, summarize } from './scoring.js?v=20261024w';
 
 /** Round-robin rounds (circle method). Odd group sizes get a bye each round. */
 export function roundRobin(n) {
@@ -105,9 +105,12 @@ export function tournament() {
   for (const c of cats.filter((x) => x.numbered)) {
     let no = 0;
     for (const letter of Object.keys(c.groups)) {
+      let pos = 0;
       for (const [a, b] of c.pairings[letter].flat()) {
         no++;
-        league.find((m) => m.cat === c.code && m.a === a && m.b === b).no = no;
+        const m = league.find((x) => x.cat === c.code && x.a === a && x.b === b);
+        m.no = no;
+        m.pos = ++pos; // 1st, 2nd... in its pool
       }
     }
   }
@@ -140,9 +143,14 @@ export function tournament() {
       const left = {};
       for (const m of queue) { left[m.a] = (left[m.a] || 0) + 1; left[m.b] = (left[m.b] || 0) + 1; }
       const load = (m) => left[m.a] + left[m.b];
-      queue.sort((x, y) => startAt[x.cat] - startAt[y.cat] || x.round - y.round || (x.no ?? 0) - (y.no ?? 0) || load(y) - load(x) || tie.get(x) - tie.get(y));
+      // Lowest match number first (Match 1, 2, 3...). A later number only moves up when the earlier ones
+      // need a team that has just played or a player who is busy in another category.
+      queue.sort((x, y) => startAt[x.cat] - startAt[y.cat] || (x.no ?? x.round) - (y.no ?? y.round) || load(y) - load(x) || tie.get(x) - tie.get(y));
       // Numbered fixtures keep the organizer's order within a group: Match 10 never starts before Match 9.
-      const inOrder = (m) => !m.no || !queue.some((x) => x.cat === m.cat && x.group === m.group && x.no && x.no < m.no);
+      // Strict: a numbered match waits for every match before it in its category's running order
+      // (pools taking turns: 1st match of each pool, then 2nd of each...). Otherwise only within its pool.
+      const before = (x, m) => (EVENT.strictOrder ? (x.pos - m.pos || x.group.localeCompare(m.group)) < 0 : x.group === m.group && x.no < m.no);
+      const inOrder = (m) => !m.no || !queue.some((x) => x.cat === m.cat && x.no && before(x, m));
       const fits = (m, allowBackToBack) => start >= startAt[m.cat] && inOrder(m) && !m.people.some((p) => busy.has(p) || (!allowBackToBack && prev.has(p)));
       const take = (m, allowBackToBack) => {
         queue.splice(queue.indexOf(m), 1);

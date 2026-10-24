@@ -1,7 +1,8 @@
-import { EVENT } from './tournament-data.js?v=20261024l';
-import { tournament, standings, category } from './engine.js?v=20261024l';
-import { mountDrawNotice, startLoop, markActiveNav, paintLiveCount, fmtTime, esc, matchHref } from './ui.js?v=20261024l';
-import { matchCard, emptyState } from './components.js?v=20261024l';
+import { EVENT } from './tournament-data.js?v=20261024w';
+import { tournament, standings, category } from './engine.js?v=20261024w';
+import { mountDrawNotice, startLoop, markActiveNav, paintLiveCount, fmtTime, esc, matchHref, dayPlanHtml, sessionFor, sessionSpan, teamJourney, currentStates } from './ui.js?v=20261024w';
+import { openTeamShare } from './share.js?v=20261024w';
+import { matchCard, matchRow, emptyState } from './components.js?v=20261024w';
 
 const $ = (s) => document.querySelector(s);
 const T = tournament();
@@ -9,21 +10,23 @@ const T = tournament();
 const params = new URLSearchParams(location.search);
 const ui = {
   cat: T.cats.some((c) => c.code === params.get('cat')) ? params.get('cat') : 'all',
-  view: ['schedule', 'groups', 'knockout'].includes(params.get('view')) ? params.get('view') : 'schedule',
+  view: ['schedule', 'groups', 'knockout'].includes(params.get('view')) ? params.get('view') : 'groups',
   status: ['live', 'upcoming', 'completed'].includes(params.get('status')) ? params.get('status') : 'all',
   group: /^[A-D]$/.test(params.get('group') || '') ? params.get('group') : 'all',
-  round: params.get('round') || 'all',
+  round: ['league', 'quarter', 'semi', 'final'].includes(params.get('round')) ? params.get('round') : 'all',
 };
 
 function syncUrl() {
   const p = new URLSearchParams();
   if (ui.cat !== 'all') p.set('cat', ui.cat);
-  if (ui.view !== 'schedule') p.set('view', ui.view);
+  if (ui.view !== 'groups') p.set('view', ui.view);
   if (ui.status !== 'all') p.set('status', ui.status);
   if (ui.group !== 'all') p.set('group', ui.group);
   if (ui.round !== 'all') p.set('round', ui.round);
   history.replaceState(null, '', `${location.pathname}${p.toString() ? `?${p}` : ''}`);
 }
+
+$('[data-day-plan]').innerHTML = dayPlanHtml();
 
 /* ---------- controls ---------- */
 $('[data-cat-tabs]').innerHTML = [['all', 'All categories'], ...T.cats.map((c) => [c.code, c.short])]
@@ -37,10 +40,8 @@ function fillGroups() {
   sel.innerHTML = `<option value="all">All groups</option>${letters.map((g) => `<option value="${g}">Group ${g}</option>`).join('')}`;
   sel.value = ui.group;
 }
-const maxRound = Math.max(...T.matches.filter((m) => m.stage === 'league').map((m) => m.round));
 $('[data-round]').insertAdjacentHTML('beforeend', [
-  ...Array.from({ length: maxRound }, (_, i) => [String(i + 1), `League round ${i + 1}`]),
-  ['quarter', 'Quarter-finals'], ['semi', 'Semi-finals'], ['final', 'Finals'],
+  ['league', 'League'], ['quarter', 'Quarter-finals'], ['semi', 'Semi-finals'], ['final', 'Finals'],
 ].map(([v, l]) => `<option value="${v}">${l}</option>`).join(''));
 $('[data-round]').value = ui.round;
 
@@ -71,24 +72,25 @@ function scheduleView(states) {
     if (ui.status === 'upcoming' && !(s.status === 'upcoming' || s.status === 'waiting')) return false;
     if (ui.status !== 'all' && ui.status !== 'upcoming' && s.status !== ui.status) return false;
     if (ui.group !== 'all' && (m.stage !== 'league' || m.group !== ui.group)) return false;
-    if (ui.round !== 'all') {
-      if (['quarter', 'semi', 'final'].includes(ui.round)) { if (m.stage !== ui.round) return false; }
-      else if (m.stage !== 'league' || String(m.round) !== ui.round) return false;
-    }
+    if (ui.round !== 'all' && m.stage !== ui.round) return false;
     return true;
   });
-  if (!list.length) return emptyState('No matches match these filters. Try All groups or All rounds.');
-  const slots = new Map();
-  for (const s of list) {
-    if (!slots.has(s.match.start)) slots.set(s.match.start, []);
-    slots.get(s.match.start).push(s);
-  }
-  return [...slots.entries()].sort((a, b) => a[0] - b[0]).map(([start, items]) => {
-    const live = items.some((s) => s.status === 'live');
-    return `<section class="slot${live ? ' slot-live' : ''}">
-      <h2 class="slot-time">${fmtTime(start)}</h2>
-      <div class="slot-grid">${items.sort((a, b) => a.match.court - b.match.court).map((s) => matchCard(s, { showCategory: ui.cat === 'all' })).join('')}</div>
-    </section>`;
+  if (!list.length) return emptyState('No matches match these filters. Try All groups or All stages.');
+  // Sheet order: category by category, league matches by match number, then the knockouts.
+  const stageRank = { league: 0, quarter: 1, semi: 2, final: 3 };
+  const order = (x, y) => stageRank[x.match.stage] - stageRank[y.match.stage] || (x.match.no ?? 0) - (y.match.no ?? 0) || x.match.id.localeCompare(y.match.id);
+  return T.cats.filter((c) => list.some((s) => s.match.cat === c.code)).map((c) => {
+    const mine = list.filter((s) => s.match.cat === c.code).sort(order);
+    const league = mine.filter((s) => s.match.stage === 'league');
+    const ko = mine.filter((s) => s.match.stage !== 'league');
+    const sess = sessionFor(league[0]?.match ?? ko[0].match);
+    const live = mine.some((s) => s.status === 'live');
+    const block = (title, items, note) => items.length ? `<section class="sched-block${live ? ' is-live' : ''}">
+      <h2 class="sched-title">${title} <small>${note}</small></h2>
+      <ol class="mlist">${items.map((s) => `<li>${matchRow(s)}</li>`).join('')}</ol>
+    </section>` : '';
+    const koSess = EVENT.sessions.find((x) => x.key === 'knockout');
+    return block(esc(c.short), league, `${esc(sess.label)} · ${sessionSpan(sess)}`) + block(`${esc(c.short)} knockouts`, ko, sessionSpan(koSess));
   }).join('');
 }
 
@@ -99,6 +101,50 @@ document.addEventListener('click', (e) => {
   const id = b.dataset.expand;
   if (expanded.has(id)) expanded.delete(id); else expanded.add(id);
   update();
+});
+
+/* ---------- team journey: every match a team plays, with results, downloadable as an image ---------- */
+const journeyDialog = document.createElement('dialog');
+journeyDialog.className = 'share-dialog journey-dialog';
+document.body.append(journeyDialog);
+journeyDialog.addEventListener('click', (e) => {
+  if (e.target === journeyDialog || e.target.closest('[data-journey-close]')) journeyDialog.close();
+});
+let journeyId = null;
+function paintJourney() {
+  if (!journeyId) return;
+  const j = teamJourney(journeyId, currentStates());
+  const row = (x) => {
+    const pill = { W: 'Won', L: 'Lost', LIVE: 'Live', NEXT: 'Upcoming' }[x.outcome];
+    return `<li class="jr-row${x.knockout ? ' is-ko' : ''}"><a href="${matchHref(x.st.match.id)}">
+      <span class="jr-code">${esc(x.code)}</span>
+      <span class="jr-main"><span class="jr-stage">${esc(x.stage)}</span><span class="jr-opp"><span class="vs">v</span> ${esc(x.opp)}</span></span>
+      <span class="jr-res jr-${x.outcome.toLowerCase()}">${x.score ? `<b>${esc(x.score)}</b>` : ''}<em>${pill}</em>${x.detail ? `<small>${esc(x.detail)}</small>` : ''}</span>
+    </a></li>`;
+  };
+  journeyDialog.innerHTML = `
+    <div class="share-head"><h2>Team journey</h2><button type="button" class="btn btn-text" data-journey-close>Close</button></div>
+    <p class="jr-cat">${esc(j.cat.name)}</p>
+    <h3 class="jr-team">${esc(j.team.players[0])} <span>&amp;</span> ${esc(j.team.players[1])}</h3>
+    <p class="jr-standing jr-tone-${j.tone}">${esc(j.standing)}</p>
+    <p class="jr-summary">${esc(j.summary)}</p>
+    <ol class="jr-list">${j.matches.map(row).join('')}</ol>
+    <div class="share-actions"><button type="button" class="btn btn-share" data-journey-image>Download or share as image</button></div>`;
+  journeyDialog.querySelector('[data-journey-image]').addEventListener('click', () => {
+    journeyDialog.close();
+    openTeamShare({
+      category: j.cat.name.replace(`${j.cat.level} `, ''), level: j.cat.level,
+      players: j.team.players, standing: j.standing, standingTone: j.tone, summary: j.summary,
+      matches: j.matches.map((x) => ({ code: x.code, stage: x.stage, opp: x.opp, outcome: x.outcome, score: x.score, detail: x.detail, knockout: x.knockout })),
+    }, `${j.team.players.map((p) => p.split(' ')[0]).join('-')}-journey.png`.replace(/[^\w.-]/g, ''));
+  });
+}
+document.addEventListener('click', (e) => {
+  const b = e.target.closest('[data-journey]');
+  if (!b) return;
+  journeyId = b.dataset.journey;
+  paintJourney();
+  journeyDialog.showModal();
 });
 
 const FORMAT_NOTE = {
@@ -114,7 +160,7 @@ function groupsView(states) {
     <ul class="q-legend" aria-label="Legend">
       <li><span class="q-badge is-confirmed">Q</span> Qualified</li>
       <li><span class="q-badge">Q</span> In a qualifying place right now</li>
-      <li class="q-legend-tip">Tap or hover a team to see its fixtures</li>
+      <li class="q-legend-tip">Tap a team to see its fixtures, or the route icon for its full journey</li>
     </ul>
     <div class="group-grid">${Object.keys(c.teamsByGroup).map((g) => groupCard(c, g, states)).join('')}</div>
   </section>`).join('');
@@ -137,7 +183,7 @@ function groupCard(c, letter, states) {
   return `<article class="group-card group-${letter.toLowerCase()}">
     <header><h3 aria-label="${single ? 'Group' : `Group ${letter}`}"><span class="g-word" aria-hidden="true">Group</span><span class="g-badge" aria-hidden="true">${letter}</span></h3><span class="g-count">${t.played} of ${t.total} played</span></header>
     <table class="table group-table">
-      <thead><tr><th scope="col"><span class="sr-only">Position</span></th><th scope="col">Team</th><th scope="col" title="Played">P</th><th scope="col" title="Won">W</th><th scope="col" title="Lost">L</th><th scope="col" title="Point difference">+/−</th></tr></thead>
+      <thead><tr><th scope="col"><span class="sr-only">Position</span></th><th scope="col">Team</th><th scope="col"><span class="sr-only">Journey</span></th><th scope="col" title="Played">P</th><th scope="col" title="Won">W</th><th scope="col" title="Lost">L</th><th scope="col" title="Point difference">+/−</th></tr></thead>
       <tbody>${t.rows.map((r, i) => {
         const open = expanded.has(r.team.id);
         const q = showQ && i < through;
@@ -147,8 +193,9 @@ function groupCard(c, letter, states) {
         <td class="t-team"><button type="button" class="team-toggle" data-expand="${r.team.id}" aria-expanded="${open}" aria-controls="fx-${r.team.id}">
           <span class="tt-name">${esc(r.team.name)}</span>${q ? `<span class="q-badge${t.complete ? ' is-confirmed' : ''}" title="${t.complete ? 'Qualified' : 'In a qualifying place'}">Q</span>` : ''}<svg class="chev" viewBox="0 0 24 24" width="16" height="16" aria-hidden="true"><path d="M6 9l6 6 6-6" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
         </button></td>
+        <td class="t-journey"><button type="button" class="journey-btn" data-journey="${r.team.id}" aria-label="${esc(r.team.name)}: all matches and results" title="All matches and results"><svg viewBox="0 0 24 24" width="17" height="17" aria-hidden="true"><circle cx="6" cy="19" r="2.6" fill="currentColor"/><path d="M8.6 19h8.4a3.5 3.5 0 0 0 0-7H7a3.5 3.5 0 0 1 0-7h7.5" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-dasharray="0.1 3.4"/><path d="M15 2.5v6M15 2.5h5l-1.4 1.6L20 5.7h-5" fill="currentColor" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round" stroke-linecap="round"/></svg></button></td>
         <td>${r.played}</td><td><strong>${r.won}</strong></td><td>${r.lost}</td><td>${r.pd > 0 ? '+' : ''}${r.pd}</td>
-      </tr><tr class="team-fixtures${open ? ' is-open' : ''}${i % 2 ? ' row-alt' : ''}" id="fx-${r.team.id}"><td colspan="6">${teamFixtures(r.team.id, matches, states)}</td></tr>`;
+      </tr><tr class="team-fixtures${open ? ' is-open' : ''}${i % 2 ? ' row-alt' : ''}" id="fx-${r.team.id}"><td colspan="7">${teamFixtures(r.team.id, matches, states)}</td></tr>`;
       }).join('')}</tbody>
     </table>
     ${note}
@@ -170,7 +217,7 @@ function teamFixtures(teamId, matches, states) {
       const won = s.score.winner === (isA ? 'A' : 'B');
       result = `<span class="fx-res ${won ? 'fx-won' : 'fx-lost'}">${won ? 'Won' : 'Lost'} ${us}–${them}</span>`;
     }
-    return `<li><a href="${matchHref(m.id)}"><span class="fx-when">Court ${m.court}, ${fmtTime(m.start)}</span><span class="fx-opp"><span class="vs">v</span> ${esc(opp.name)}</span>${result}</a></li>`;
+    return `<li><a href="${matchHref(m.id)}"><span class="fx-when">Match ${m.no ?? m.round}${s.court ? `, court ${s.court}` : ''}</span><span class="fx-opp"><span class="vs">v</span> ${esc(opp.name)}</span>${result}</a></li>`;
   }).join('')}</ul>`;
 }
 
@@ -208,6 +255,7 @@ function render(states) {
     <p>${done} of ${all.length} played${live ? `, <span class="live-text">${live} live</span>` : ''}</p>`;
   const body = ui.view === 'groups' ? groupsView(states) : ui.view === 'knockout' ? knockoutView(states) : scheduleView(states);
   $('[data-view-body]').innerHTML = body;
+  if (journeyDialog.open) paintJourney();
 }
 function update() {
   paintControls();

@@ -11,7 +11,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Big+Shoulders+Display:wght@600;800;900&family=Caveat:wght@600;700&family=Figtree:wght@400;500;600;700&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="assets/css/styles.css?v=20261024l">
+  <link rel="stylesheet" href="assets/css/styles.css?v=20261024w">
 </head>
 <body class="page-match">
   <header class="site-header">
@@ -33,6 +33,7 @@
         <p class="match-cat" data-cat></p>
         <h1 class="match-title" data-title></h1>
         <p class="match-meta" data-meta></p>
+        <p class="report-chip" data-report></p>
       </div>
       <div class="head-actions">
         <div data-status></div>
@@ -78,6 +79,10 @@
             <h2 id="scorer-title">Scorer controls</h2>
             <button type="button" class="btn btn-text" data-lock>Lock</button>
           </div>
+          <label class="court-pick"><span>Court</span>
+            <select data-court-pick><option value="">Not set</option><option>1</option><option>2</option><option>3</option><option>4</option><option>5</option><option>6</option><option>7</option><option>8</option><option>9</option><option>10</option></select>
+            <em>Optional. Shown on the match once set.</em>
+          </label>
           <div class="point-buttons">
             <button type="button" class="point-btn point-a" data-point="A"><span>Point to</span><strong data-btn-team="A"></strong></button>
             <button type="button" class="point-btn point-b" data-point="B"><span>Point to</span><strong data-btn-team="B"></strong></button>
@@ -142,7 +147,7 @@
     </div>
   </footer>
 
-  <script type="module" src="assets/js/match.js?v=20261024l"></script>
-  <script type="module" src="assets/js/feedback.js?v=20261024l"></script>
+  <script type="module" src="assets/js/match.js?v=20261024w"></script>
+  <script type="module" src="assets/js/feedback.js?v=20261024w"></script>
 </body>
 </html>

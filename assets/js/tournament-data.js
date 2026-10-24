@@ -19,6 +19,15 @@ export const EVENT = {
   leagueSlot: 12, // minutes per league match slot (15-point game plus changeover)
   knockoutStart: 14 * 60, // quarter-finals, semi-finals and finals from 2 PM at the earliest
   knockoutBreak: 10, // minutes between the last league match and the first knockout if the league runs past knockoutStart
+  // Official session windows from the organizer. Players should reach the venue reportBefore minutes early.
+  sessions: [
+    { key: 'beginner', label: 'Beginner league', cats: ['BMD', 'BWD'], start: 9 * 60, end: 11 * 60, detail: "Beginner Men's and Beginner Women's league matches" },
+    { key: 'intermediate', label: 'Intermediate league', cats: ['IMD', 'IXD'], start: 10 * 60 + 45, end: 13 * 60, detail: "Intermediate Mixed and Intermediate Men's league matches" },
+    { key: 'knockout', label: 'Knockouts', cats: [], start: 14 * 60, end: 16 * 60, detail: 'Quarter-finals, semi-finals and finals' },
+  ],
+  reportBefore: 30, // minutes before the category's start time
+  calledWithin: 5, // minutes after being called before a walkover may be given
+  strictOrder: false, // true: a match never starts before any lower number in its category (leaves courts idle); false: in order within each pool
   timesTentative: true, // shows "times are tentative" on the schedule
   quarterSlot: 16, // minutes per quarter-final (single game to 21, plus changeover)
   knockoutSlot: 32, // minutes per semi-final or final (best of 3 games to 21, plus changeover)
@@ -30,15 +39,18 @@ export const EVENT = {
     { title: 'Refreshments', detail: 'Through the day at the venue' },
     { title: 'Trophies', detail: 'Winner and runner-up in every category' },
   ],
+  // Official rules from the organizer (24 Oct), then the eligibility and conduct rules from the poster.
   rules: [
-    'League matches are a single game to 15 points. Quarter-finals are a single game to 21. Semi-finals and finals are best of 3 games to 21. Rally scoring, with a golden point instead of deuce.',
-    'Beginner: players with little or no tournament experience. Intermediate: players with tournament experience who have never won or been runner-up in a tournament.',
-    'Open or advanced players, district, state or national-level players and tournament winners or runners-up are not eligible. If found, they will be removed from the tournament with no refund.',
-    'Players must play in the correct category for their level. Incorrect level declaration may result in disqualification.',
-    'Players must report 30 minutes before their scheduled match. Late arrival may result in a walkover. Non-marking badminton shoes are compulsory.',
-    'Players must respect opponents, officials and the venue. Abusive or unsportsmanlike behaviour will not be tolerated.',
-    "The referee's decision is final. Players must follow the official match schedule. No replay will be given for missed matches.",
-    'The winner and runner-up of each category will receive trophies. All players are expected to have read, understood and agreed to these rules.',
+    "Reporting time: all players must report at least 30 minutes before their category's scheduled start time (Beginners by 8:30 AM, Intermediate by 10:15 AM, knockouts by 1:30 PM).",
+    'Match start: matches start strictly on time. Players must be ready when called.',
+    'Pool stage: league format within each pool, each match played to 15 points (rally scoring, golden point at 14–14).',
+    'Knockout qualification: the top 2 teams from each pool qualify for the knockout round, as per the published fixture format.',
+    'Semi-finals and finals: played to 21 points (golden point at 20–20). Quarter-finals are one game to 21.',
+    'Late arrival or no-show: teams that fail to report when called may forfeit the match. If a team does not arrive within 5 minutes of being called, a walkover may be awarded to the opposing team.',
+    "Umpire's decision: the umpire's decision on on-court calls is final.",
+    'Beginner: players with little or no tournament experience. Intermediate: players with tournament experience who have never won or been runner-up in a tournament. Open, advanced, district, state or national-level players are not eligible.',
+    'Non-marking badminton shoes are compulsory. Players must respect opponents, officials and the venue.',
+    'The winner and runner-up of each category receive trophies.',
   ],
 };
 
@@ -73,8 +85,15 @@ export const CATEGORIES = [
       C: [[['IMD-11', 'IMD-12'], ['IMD-13', 'IMD-14']], [['IMD-11', 'IMD-13'], ['IMD-12', 'IMD-15']], [['IMD-11', 'IMD-14'], ['IMD-13', 'IMD-15']], [['IMD-11', 'IMD-15'], ['IMD-12', 'IMD-14']], [['IMD-12', 'IMD-13'], ['IMD-14', 'IMD-15']]],
       D: [[['IMD-16', 'IMD-17'], ['IMD-18', 'IMD-19']], [['IMD-16', 'IMD-18'], ['IMD-17', 'IMD-20']], [['IMD-16', 'IMD-19'], ['IMD-18', 'IMD-20']], [['IMD-16', 'IMD-20'], ['IMD-17', 'IMD-19']], [['IMD-17', 'IMD-18'], ['IMD-19', 'IMD-20']]],
     } },
-  { code: 'IXD', name: "Intermediate Mixed Doubles", short: "Intermediate Mixed", level: 'Intermediate', format: 'qf', startAt: 10 * 60 + 45, minCourts: 1,
-    groups: { A: ['IXD-07', 'IXD-10', 'IXD-12', 'IXD-13'], B: ['IXD-01', 'IXD-05', 'IXD-04', 'IXD-08'], C: ['IXD-06', 'IXD-16', 'IXD-11', 'IXD-15'], D: ['IXD-09', 'IXD-14', 'IXD-03', 'IXD-02'] } },
+  { code: 'IXD', name: "Intermediate Mixed Doubles", short: "Intermediate Mixed", level: 'Intermediate', format: 'qf', startAt: 10 * 60 + 45, minCourts: 1, numbered: true,
+    groups: { A: ['IXD-01', 'IXD-02', 'IXD-03', 'IXD-04'], B: ['IXD-05', 'IXD-06', 'IXD-07', 'IXD-08'], C: ['IXD-09', 'IXD-10', 'IXD-11', 'IXD-12'], D: ['IXD-13', 'IXD-14', 'IXD-15', 'IXD-16'] },
+    // Organizer's fixture sheet (24 Oct): full round robin, matches 1-24 in this order, 2 per round.
+    pairings: {
+      A: [[['IXD-01', 'IXD-04'], ['IXD-02', 'IXD-03']], [['IXD-01', 'IXD-03'], ['IXD-04', 'IXD-02']], [['IXD-01', 'IXD-02'], ['IXD-03', 'IXD-04']]],
+      B: [[['IXD-05', 'IXD-08'], ['IXD-06', 'IXD-07']], [['IXD-05', 'IXD-07'], ['IXD-08', 'IXD-06']], [['IXD-05', 'IXD-06'], ['IXD-07', 'IXD-08']]],
+      C: [[['IXD-09', 'IXD-12'], ['IXD-10', 'IXD-11']], [['IXD-09', 'IXD-11'], ['IXD-12', 'IXD-10']], [['IXD-09', 'IXD-10'], ['IXD-11', 'IXD-12']]],
+      D: [[['IXD-13', 'IXD-16'], ['IXD-14', 'IXD-15']], [['IXD-13', 'IXD-15'], ['IXD-16', 'IXD-14']], [['IXD-13', 'IXD-14'], ['IXD-15', 'IXD-16']]],
+    } },
 ];
 
 // Entry number -> players, numbered as in the organizer's list of 24 October 2026 (each word capitalised).

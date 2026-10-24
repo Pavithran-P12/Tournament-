@@ -1,12 +1,12 @@
-import { EVENT } from './tournament-data.js?v=20261024l';
-import { tournament, category } from './engine.js?v=20261024l';
-import { describeFormat, replay, gameScores } from './scoring.js?v=20261024l';
+import { EVENT } from './tournament-data.js?v=20261024w';
+import { tournament, category } from './engine.js?v=20261024w';
+import { describeFormat, replay, gameScores } from './scoring.js?v=20261024w';
 import {
   mountDrawNotice, startLoop, markActiveNav, paintLiveCount, fmtTime, esc,
   stageLabel, statusPill, teamLabel, recordFor, saveLocalScore, deleteScore,
-  isScorer, checkPasskey, lockScorer, downloadResults, pendingChanges, publishedInfo,
-} from './ui.js?v=20261024l';
-import { openShare } from './share.js?v=20261024l';
+  isScorer, checkPasskey, lockScorer, downloadResults, pendingChanges, publishedInfo, sessionFor, sessionSpan, reportBy,
+} from './ui.js?v=20261024w';
+import { openShare } from './share.js?v=20261024w';
 
 const $ = (s) => document.querySelector(s);
 const T = tournament();
@@ -37,7 +37,7 @@ function init() {
   let lockUntil = 0;
 
   const record = () => recordFor(m.id);
-  const writeRecord = (rec) => saveLocalScore(m.id, { events: rec.events, confirmed: !!rec.confirmed });
+  const writeRecord = (rec) => saveLocalScore(m.id, { events: rec.events || [], confirmed: !!rec.confirmed, ...(rec.court ? { court: rec.court } : {}) });
   let deleteArmed = 0;
   const newId = () => (crypto.randomUUID ? crypto.randomUUID() : `${Date.now()}-${Math.random()}`);
 
@@ -51,7 +51,12 @@ function init() {
     const wA = s.winner === 'A' && st.status === 'completed' ? '<span class="w-badge" title="Winner">W</span>' : '';
     const wB = s.winner === 'B' && st.status === 'completed' ? '<span class="w-badge" title="Winner">W</span>' : '';
     $('[data-title]').innerHTML = `<span class="tt-a${wA ? ' is-winner' : ''}">${esc(nameA)}${wA}</span> <span class="vs">v</span> <span class="tt-b${wB ? ' is-winner' : ''}">${esc(nameB)}${wB}</span>`;
-    $('[data-meta]').textContent = `${stageLabel(m)}. Court ${m.court}, ${fmtTime(m.start)}.`;
+    $('[data-meta]').textContent = `${stageLabel(m)}.${st.court ? ` Court ${st.court}.` : ''}`;
+    const sess = sessionFor(m);
+    $('[data-report]').innerHTML = st.status === 'upcoming' || st.status === 'waiting'
+      ? `<span aria-hidden="true">⏰</span> <strong>Report ${reportBy(sess)}</strong> <span>${esc(sess.label)} ${esc(sessionSpan(sess))}</span>`
+      : '';
+    $('[data-report]').hidden = !(st.status === 'upcoming' || st.status === 'waiting');
     $('[data-status]').innerHTML = statusPill(st);
 
     const court = $('[data-court]');
@@ -94,7 +99,7 @@ function init() {
     else if (st.status === 'live' && s.goldenPoint) chipText = 'Golden point';
     else if (st.status === 'live' && s.matchPoint) chipText = 'Match point';
     else if (st.status === 'live' && s.gamePoint) chipText = 'Game point';
-    else if (st.status === 'upcoming') chipText = `Starts ${fmtTime(m.start)}`;
+    else if (st.status === 'upcoming') chipText = m.no ? `Match ${m.no} · upcoming` : 'Upcoming';
     else if (st.status === 'waiting') chipText = 'Waiting for teams';
     chip.hidden = !chipText;
     chip.innerHTML = chipText;
@@ -232,8 +237,8 @@ function init() {
       ['Team 2', team('B')],
       ['Category', `<span class="cat-chip cat-chip-${cat.level.toLowerCase()}">${esc(cat.level)}</span> ${esc(cat.name.replace(`${cat.level} `, ''))}`],
       ['Stage', stage],
-      ['Court', `<span class="court-chip">${m.court}</span> Court ${m.court}`],
-      ['Scheduled', `${fmtTime(m.start)}, ${esc(EVENT.dateLabel)}`],
+      ['Court', st.court ? `<span class="court-chip">${st.court}</span> Court ${st.court}` : 'Called on the day'],
+      ['Session', `${esc(sessionFor(m).label)}, ${esc(sessionSpan(sessionFor(m)))}, ${esc(EVENT.dateLabel)}`],
       ['Format', esc(describeFormat(m.format))],
       ['Match code', `<code>${esc(m.id)}</code>`],
     ];
@@ -243,6 +248,8 @@ function init() {
   let askingPasskey = false;
 
   function renderScorer(st, nameA, nameB) {
+    const pick = $('[data-court-pick]');
+    if (document.activeElement !== pick) pick.value = st.court ? String(st.court) : '';
     const rec = record();
     const canScore = !!(st.a && st.b);
     if (scoring && !isScorer()) scoring = false;
@@ -290,7 +297,7 @@ function init() {
       category: cat.name.replace(`${cat.level} `, ''),
       level: cat.level,
       stage: stageLabel(m),
-      court: m.court,
+      court: st.court || null,
       winnerPlayers: winner.players,
       loserPlayers: loser.players,
       target: m.format.target,
@@ -336,6 +343,11 @@ function init() {
     }
   });
   $('[data-passkey-cancel]').addEventListener('click', () => { askingPasskey = false; refresh(); });
+  $('[data-court-pick]').addEventListener('change', (e) => {
+    const rec = record() || { events: [], confirmed: false };
+    writeRecord({ ...rec, court: e.target.value ? Number(e.target.value) : null });
+    refresh();
+  });
   $('[data-lock]').addEventListener('click', () => { lockScorer(); scoring = false; refresh(); });
 
   document.querySelectorAll('[data-point]').forEach((btn) => btn.addEventListener('click', () => {

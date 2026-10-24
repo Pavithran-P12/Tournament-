@@ -1,8 +1,8 @@
 // Builds a shareable result card sized for Instagram Stories (1080 x 1920 PNG, 9:16) for a finished match and opens a preview
 // with Share (phones that support sharing files) and Download buttons.
 
-import { EVENT } from './tournament-data.js?v=20261024l';
-import { rng } from './tournament-data.js?v=20261024l';
+import { EVENT } from './tournament-data.js?v=20261024w';
+import { rng } from './tournament-data.js?v=20261024w';
 
 const W = 1080;
 const H = 1920;
@@ -138,44 +138,8 @@ function shuttleArt(ctx) {
   ctx.restore();
 }
 
-/**
- * info: { category, level, stage, court, winnerPlayers, loserPlayers, winScore, loseScore, isFinal, target }
- */
-export async function buildResultImage(info) {
-  if (document.fonts?.ready) await document.fonts.ready;
-  const canvas = document.createElement('canvas');
-  canvas.width = W;
-  canvas.height = H;
-  const ctx = canvas.getContext('2d');
-  ctx.textBaseline = 'alphabetic';
-
-  // Layout first: the winner block decides where the diagonal sits, so text never crosses it.
-  const labelY = SAFE_TOP + 430;
-  const maxW = W - 2 * M;
-  // Each player gets their own line (two if a name is very long), as big as the width allows.
-  let players = info.winnerPlayers.map((n) => [n.toUpperCase()]);
-  let size = fitLines(ctx, players.flat(), 900, DISPLAY, 150, 56, maxW);
-  ctx.font = `900 ${size}px ${DISPLAY}`;
-  if (players.flat().some((n) => ctx.measureText(n).width > maxW)) {
-    players = players.map(([n]) => {
-      if (ctx.measureText(n).width <= maxW) return [n];
-      const w = n.split(' ');
-      const half = Math.ceil(w.length / 2);
-      return [w.slice(0, half).join(' '), w.slice(half).join(' ')];
-    });
-    size = fitLines(ctx, players.flat(), 900, DISPLAY, 120, 44, maxW);
-  }
-  const lineH = size * 0.95;
-  const sepH = 86; // the "&" divider between the two players
-  const namesTop = labelY + 40 + size * 0.8;
-  const blockBottom = namesTop + lineH * (players.flat().length - 1) + sepH;
-  // the edge rises to the right, so leave room for it under the right end of the names
-  const edgeL = Math.min(Math.max(blockBottom + 200, 1150), 1250);
-  const edgeR = edgeL - 110;
-  background(ctx, edgeL, edgeR);
-  shuttleArt(ctx);
-
-  // Header
+/** Logo, THIRDSPACE PLAY and the tournament line, inside the top safe zone. */
+async function drawHeader(ctx) {
   const logo = await loadImage('assets/img/thirdspace-logo.png');
   if (logo) ctx.drawImage(logo, M, SAFE_TOP + 20, 104, 104);
   ctx.fillStyle = C.line;
@@ -187,89 +151,10 @@ export async function buildResultImage(info) {
   ctx.font = `700 20px ${BODY}`;
   spaced(ctx, 'BADMINTON TOURNAMENT  2026', M + 130, SAFE_TOP + 110, 3.5);
 
-  // Category row
-  const rowY = SAFE_TOP + 270;
-  ctx.font = `800 20px ${BODY}`;
-  const lvl = info.level.toUpperCase();
-  const lvlW = ctx.measureText(lvl).width + 28 + 2.5 * lvl.length;
-  roundRect(ctx, M, rowY - 30, lvlW, 40, 6);
-  ctx.fillStyle = info.level === 'Intermediate' ? C.live : C.sky;
-  ctx.fill();
-  ctx.fillStyle = info.level === 'Intermediate' ? '#fff' : C.ink;
-  spaced(ctx, lvl, M + 14, rowY - 3, 2.5);
-  ctx.fillStyle = C.line;
-  ctx.font = `800 34px ${DISPLAY}`;
-  spaced(ctx, info.category.toUpperCase(), M + lvlW + 18, rowY, 1.5);
-  ctx.fillStyle = C.muted;
-  ctx.font = `600 22px ${BODY}`;
-  ctx.fillText(`${info.stage}   |   Court ${info.court}`, M, rowY + 44);
+}
 
-  // Winners label
-  ctx.fillStyle = C.win;
-  ctx.fillRect(M, labelY - 13, 46, 5);
-  ctx.font = `800 26px ${BODY}`;
-  spaced(ctx, info.isFinal ? 'CHAMPIONS' : 'WINNERS', M + 62, labelY, 6);
-
-  // Winner names: player one, a gold "&" divider, player two
-  ctx.font = `900 ${size}px ${DISPLAY}`;
-  ctx.fillStyle = C.line;
-  let y = namesTop;
-  players.forEach((lines, pi) => {
-    if (pi > 0) {
-      const midY = ((y - lineH) + (y + sepH - size * 0.74)) / 2; // halfway between the two names
-      ctx.fillStyle = C.gold;
-      ctx.font = `900 48px ${DISPLAY}`;
-      ctx.fillText('&', M, midY + 16);
-      ctx.fillRect(M + 52, midY, 220, 3);
-      ctx.font = `900 ${size}px ${DISPLAY}`;
-      ctx.fillStyle = C.line;
-      y += sepH;
-    }
-    for (const line of lines) { ctx.fillText(line, M, y); y += lineH; }
-  });
-
-  // Score: winner solid, opponent outlined
-  const scoreBase = Math.min(edgeR + 120 + 260, FOOT - 70);
-  ctx.font = `900 250px ${DISPLAY}`;
-  const ws = String(info.winScore);
-  const ls = String(info.loseScore);
-  ctx.fillStyle = C.win;
-  ctx.fillText(ws, M - 8, scoreBase);
-  const wsW = ctx.measureText(ws).width;
-  ctx.save();
-  ctx.translate(M + wsW + 30, scoreBase - 100);
-  ctx.rotate(0.35);
-  ctx.fillStyle = 'rgba(238,243,239,.35)';
-  ctx.fillRect(-4, -80, 8, 160);
-  ctx.restore();
-  ctx.lineWidth = 4;
-  ctx.strokeStyle = 'rgba(238,243,239,.75)';
-  ctx.strokeText(ls, M + wsW + 70, scoreBase);
-  const scoreRight = M + wsW + 70 + ctx.measureText(ls).width;
-
-  // Score caption, to the right of the numbers
-  const capX = scoreRight + 44;
-  const multi = info.bestOf > 1;
-  const cap1 = multi ? 'Games won' : 'Rally scoring';
-  const cap2 = multi ? info.gameLine : `Single game to ${info.target}`;
-  ctx.font = `600 24px ${BODY}`;
-  const capW = Math.max(ctx.measureText(cap1).width, ctx.measureText(cap2).width);
-  if (capX + capW <= W - M) {
-    ctx.textAlign = 'left';
-    ctx.font = `700 20px ${BODY}`;
-    ctx.fillStyle = C.muted;
-    spaced(ctx, 'FINAL SCORE', capX, scoreBase - 150, 4);
-    ctx.font = `600 24px ${BODY}`;
-    ctx.fillStyle = C.line;
-    ctx.fillText(cap1, capX, scoreBase - 110);
-    ctx.fillText(cap2, capX, scoreBase - 76);
-  } else if (multi) {
-    // not enough room beside the numbers: put the game scores underneath
-    ctx.font = `600 26px ${BODY}`;
-    ctx.fillStyle = C.line;
-    ctx.fillText(`Games  ${info.gameLine}`, M, scoreBase + 50);
-  }
-
+/** Footer band: venue and Instagram on the left, date and the created-by pill on the right. */
+function drawFooter(ctx) {
   // Footer band
   ctx.fillStyle = 'rgba(0,0,0,.28)';
   ctx.fillRect(0, FOOT, W, H - FOOT);
@@ -347,6 +232,269 @@ export async function buildResultImage(info) {
   ctx.fillStyle = '#3c5852';
   ctx.fillText(parts.d, tx, base - 1);
 
+}
+
+/**
+ * info: { category, level, stage, court, winnerPlayers, loserPlayers, winScore, loseScore, isFinal, target }
+ */
+export async function buildResultImage(info) {
+  if (document.fonts?.ready) await document.fonts.ready;
+  const canvas = document.createElement('canvas');
+  canvas.width = W;
+  canvas.height = H;
+  const ctx = canvas.getContext('2d');
+  ctx.textBaseline = 'alphabetic';
+
+  // Layout first: the winner block decides where the diagonal sits, so text never crosses it.
+  const labelY = SAFE_TOP + 430;
+  const maxW = W - 2 * M;
+  // Each player gets their own line (two if a name is very long), as big as the width allows.
+  let players = info.winnerPlayers.map((n) => [n.toUpperCase()]);
+  let size = fitLines(ctx, players.flat(), 900, DISPLAY, 150, 56, maxW);
+  ctx.font = `900 ${size}px ${DISPLAY}`;
+  if (players.flat().some((n) => ctx.measureText(n).width > maxW)) {
+    players = players.map(([n]) => {
+      if (ctx.measureText(n).width <= maxW) return [n];
+      const w = n.split(' ');
+      const half = Math.ceil(w.length / 2);
+      return [w.slice(0, half).join(' '), w.slice(half).join(' ')];
+    });
+    size = fitLines(ctx, players.flat(), 900, DISPLAY, 120, 44, maxW);
+  }
+  const lineH = size * 0.95;
+  const sepH = 86; // the "&" divider between the two players
+  const namesTop = labelY + 40 + size * 0.8;
+  const blockBottom = namesTop + lineH * (players.flat().length - 1) + sepH;
+  // the edge rises to the right, so leave room for it under the right end of the names
+  const edgeL = Math.min(Math.max(blockBottom + 200, 1150), 1250);
+  const edgeR = edgeL - 110;
+  background(ctx, edgeL, edgeR);
+  shuttleArt(ctx);
+
+  await drawHeader(ctx);
+
+  // Category row
+  const rowY = SAFE_TOP + 270;
+  ctx.font = `800 20px ${BODY}`;
+  const lvl = info.level.toUpperCase();
+  const lvlW = ctx.measureText(lvl).width + 28 + 2.5 * lvl.length;
+  roundRect(ctx, M, rowY - 30, lvlW, 40, 6);
+  ctx.fillStyle = info.level === 'Intermediate' ? C.live : C.sky;
+  ctx.fill();
+  ctx.fillStyle = info.level === 'Intermediate' ? '#fff' : C.ink;
+  spaced(ctx, lvl, M + 14, rowY - 3, 2.5);
+  ctx.fillStyle = C.line;
+  ctx.font = `800 34px ${DISPLAY}`;
+  spaced(ctx, info.category.toUpperCase(), M + lvlW + 18, rowY, 1.5);
+  ctx.fillStyle = C.muted;
+  ctx.font = `600 22px ${BODY}`;
+  ctx.fillText(info.court ? `${info.stage}   |   Court ${info.court}` : info.stage, M, rowY + 44);
+
+  // Winners label
+  ctx.fillStyle = C.win;
+  ctx.fillRect(M, labelY - 13, 46, 5);
+  ctx.font = `800 26px ${BODY}`;
+  spaced(ctx, info.isFinal ? 'CHAMPIONS' : 'WINNERS', M + 62, labelY, 6);
+
+  // Winner names: player one, a gold "&" divider, player two
+  ctx.font = `900 ${size}px ${DISPLAY}`;
+  ctx.fillStyle = C.line;
+  let y = namesTop;
+  players.forEach((lines, pi) => {
+    if (pi > 0) {
+      const midY = ((y - lineH) + (y + sepH - size * 0.74)) / 2; // halfway between the two names
+      ctx.fillStyle = C.gold;
+      ctx.font = `900 48px ${DISPLAY}`;
+      ctx.fillText('&', M, midY + 16);
+      ctx.fillRect(M + 52, midY, 220, 3);
+      ctx.font = `900 ${size}px ${DISPLAY}`;
+      ctx.fillStyle = C.line;
+      y += sepH;
+    }
+    for (const line of lines) { ctx.fillText(line, M, y); y += lineH; }
+  });
+
+  // Score: winner solid, opponent outlined
+  const scoreBase = Math.min(edgeR + 120 + 260, FOOT - 70);
+  ctx.font = `900 250px ${DISPLAY}`;
+  const ws = String(info.winScore);
+  const ls = String(info.loseScore);
+  ctx.fillStyle = C.win;
+  ctx.fillText(ws, M - 8, scoreBase);
+  const wsW = ctx.measureText(ws).width;
+  ctx.save();
+  ctx.translate(M + wsW + 30, scoreBase - 100);
+  ctx.rotate(0.35);
+  ctx.fillStyle = 'rgba(238,243,239,.35)';
+  ctx.fillRect(-4, -80, 8, 160);
+  ctx.restore();
+  ctx.lineWidth = 4;
+  ctx.strokeStyle = 'rgba(238,243,239,.75)';
+  ctx.strokeText(ls, M + wsW + 70, scoreBase);
+  const scoreRight = M + wsW + 70 + ctx.measureText(ls).width;
+
+  // Score caption, to the right of the numbers
+  const capX = scoreRight + 44;
+  const multi = info.bestOf > 1;
+  const cap1 = multi ? 'Games won' : 'Rally scoring';
+  const cap2 = multi ? info.gameLine : `Single game to ${info.target}`;
+  ctx.font = `600 24px ${BODY}`;
+  const capW = Math.max(ctx.measureText(cap1).width, ctx.measureText(cap2).width);
+  if (capX + capW <= W - M) {
+    ctx.textAlign = 'left';
+    ctx.font = `700 20px ${BODY}`;
+    ctx.fillStyle = C.muted;
+    spaced(ctx, 'FINAL SCORE', capX, scoreBase - 150, 4);
+    ctx.font = `600 24px ${BODY}`;
+    ctx.fillStyle = C.line;
+    ctx.fillText(cap1, capX, scoreBase - 110);
+    ctx.fillText(cap2, capX, scoreBase - 76);
+  } else if (multi) {
+    // not enough room beside the numbers: put the game scores underneath
+    ctx.font = `600 26px ${BODY}`;
+    ctx.fillStyle = C.line;
+    ctx.fillText(`Games  ${info.gameLine}`, M, scoreBase + 50);
+  }
+
+  drawFooter(ctx);
+
+  return canvas;
+}
+
+
+/**
+ * Team journey card: every match the team played or will play, in order, with results.
+ * info: { category, level, group, players: [p1, p2], summary, standing, matches: [{ code, stage, opp, outcome, score, detail }] }
+ * outcome: 'W' | 'L' | 'LIVE' | 'NEXT'
+ */
+export async function buildTeamImage(info) {
+  if (document.fonts?.ready) await document.fonts.ready;
+  const canvas = document.createElement('canvas');
+  canvas.width = W;
+  canvas.height = H;
+  const ctx = canvas.getContext('2d');
+  ctx.textBaseline = 'alphabetic';
+  const maxW = W - 2 * M;
+
+  // Names: one line per player, sized to fit.
+  const names = info.players.map((n) => n.toUpperCase());
+  const ampW0 = 44;
+  const size = fitLines(ctx, names, 900, DISPLAY, 92, 46, maxW - ampW0);
+  const rowY = SAFE_TOP + 200;
+  const labelY = rowY + 70;
+  const name1Y = labelY + 26 + size * 0.8;
+  const lineH = size * 0.98;
+  const name2Y = name1Y + lineH;
+  const standY = name2Y + 30 + 48;
+  const summaryY = standY + 40;
+  const edgeL = summaryY + 70;
+  background(ctx, edgeL, edgeL - 80);
+  shuttleArt(ctx);
+  await drawHeader(ctx);
+
+  // Category row
+  ctx.font = `800 20px ${BODY}`;
+  const lvl = info.level.toUpperCase();
+  const lvlW = ctx.measureText(lvl).width + 28 + 2.5 * lvl.length;
+  roundRect(ctx, M, rowY - 30, lvlW, 40, 6);
+  ctx.fillStyle = info.level === 'Intermediate' ? C.live : C.sky;
+  ctx.fill();
+  ctx.fillStyle = info.level === 'Intermediate' ? '#fff' : C.ink;
+  spaced(ctx, lvl, M + 14, rowY - 3, 2.5);
+  ctx.fillStyle = C.line;
+  ctx.font = `800 34px ${DISPLAY}`;
+  spaced(ctx, info.category.toUpperCase(), M + lvlW + 18, rowY, 1.5);
+
+  // Label + names
+  ctx.fillStyle = C.win;
+  ctx.fillRect(M, labelY - 12, 46, 5);
+  ctx.font = `800 22px ${BODY}`;
+  spaced(ctx, 'TOURNAMENT JOURNEY', M + 62, labelY, 5);
+  ctx.font = `900 ${size}px ${DISPLAY}`;
+  ctx.fillStyle = C.line;
+  ctx.fillText(names[0], M, name1Y);
+  ctx.fillStyle = C.gold;
+  ctx.font = `900 ${Math.round(size * 0.5)}px ${DISPLAY}`;
+  ctx.fillText('&', M, name2Y);
+  ctx.font = `900 ${size}px ${DISPLAY}`;
+  ctx.fillStyle = C.line;
+  ctx.fillText(names[1], M + ampW0, name2Y);
+
+  // Standing and record, inside the slab
+  ctx.font = `900 56px ${DISPLAY}`;
+  ctx.fillStyle = info.standingTone === 'gold' ? C.gold : info.standingTone === 'win' ? C.win : C.line;
+  spaced(ctx, info.standing.toUpperCase(), M, standY, 2);
+  ctx.font = `600 24px ${BODY}`;
+  ctx.fillStyle = C.muted;
+  ctx.fillText(info.summary, M, summaryY);
+  const bandY = edgeL - 100; // list starts below the slab edge (see top below)
+
+  // Match list
+  const top = edgeL + 50;
+  const bottom = FOOT - 24;
+  const n = Math.max(info.matches.length, 1);
+  const rowH = Math.min(104, Math.floor((bottom - top) / n));
+  info.matches.forEach((mt, i) => {
+    const y = top + i * rowH;
+    const h = rowH - 12;
+    roundRect(ctx, M, y, maxW, h, 14);
+    ctx.fillStyle = mt.knockout ? 'rgba(233,196,106,.10)' : 'rgba(255,255,255,.05)';
+    ctx.fill();
+    ctx.fillStyle = mt.knockout ? C.gold : C.win;
+    ctx.fillRect(M, y + 10, 5, h - 20);
+    const mid = y + h / 2;
+    // code badge
+    ctx.font = `900 ${Math.round(h * 0.42)}px ${DISPLAY}`;
+    ctx.fillStyle = C.line;
+    ctx.fillText(mt.code, M + 24, mid + h * 0.15);
+    // stage + opponent
+    const textX = M + 150;
+    ctx.font = `700 ${Math.max(16, Math.round(h * 0.2))}px ${BODY}`;
+    ctx.fillStyle = C.muted;
+    ctx.fillText(mt.stage.toUpperCase(), textX, mid - h * 0.1);
+    ctx.font = `700 ${Math.max(20, Math.round(h * 0.29))}px ${BODY}`;
+    ctx.fillStyle = C.line;
+    let opp = `v ${mt.opp}`;
+    const oppMax = maxW - 150 - 250;
+    while (ctx.measureText(opp).width > oppMax && opp.length > 6) opp = `${opp.slice(0, -2)}…`;
+    ctx.fillText(opp, textX, mid + h * 0.27);
+    // outcome pill + score
+    const pillW = 64;
+    const pillH = Math.min(46, h * 0.5);
+    const px = W - M - 24 - pillW;
+    const colors = { W: [C.win, C.ink], L: ['rgba(238,243,239,.18)', C.line], LIVE: [C.live, '#fff'], NEXT: ['rgba(238,243,239,.10)', C.muted] };
+    const [bg, fg] = colors[mt.outcome];
+    roundRect(ctx, px, mid - pillH / 2, pillW, pillH, 10);
+    ctx.fillStyle = bg;
+    ctx.fill();
+    ctx.fillStyle = fg;
+    ctx.font = `900 ${Math.round(pillH * 0.6)}px ${DISPLAY}`;
+    ctx.textAlign = 'center';
+    ctx.fillText(mt.outcome === 'NEXT' ? '–' : mt.outcome === 'LIVE' ? 'LIVE' : mt.outcome, px + pillW / 2, mid + pillH * 0.22);
+    ctx.textAlign = 'right';
+    if (mt.score) {
+      ctx.font = `900 ${Math.round(h * 0.4)}px ${DISPLAY}`;
+      ctx.fillStyle = mt.outcome === 'W' ? C.win : C.line;
+      ctx.fillText(mt.score, px - 18, mid + h * 0.12);
+      if (mt.detail) {
+        ctx.font = `600 ${Math.max(14, Math.round(h * 0.16))}px ${BODY}`;
+        ctx.fillStyle = C.muted;
+        ctx.fillText(mt.detail, px - 18, mid + h * 0.36);
+      }
+    } else {
+      ctx.font = `600 ${Math.max(16, Math.round(h * 0.2))}px ${BODY}`;
+      ctx.fillStyle = C.muted;
+      ctx.fillText(mt.outcome === 'LIVE' ? 'In play' : 'Upcoming', px - 18, mid + 8);
+    }
+    ctx.textAlign = 'left';
+  });
+  if (!info.matches.length) {
+    ctx.font = `600 28px ${BODY}`;
+    ctx.fillStyle = C.muted;
+    ctx.fillText('No matches yet.', M, top + 40);
+  }
+
+  drawFooter(ctx);
   return canvas;
 }
 
@@ -369,12 +517,15 @@ function ensureDialog() {
   return dialog;
 }
 
-export async function openShare(info, fileName) {
+/** Opens the preview dialog for any card builder. */
+async function openCard(build, info, fileName, title, shareText) {
   const d = ensureDialog();
+  d.querySelector('.share-head h2').textContent = title;
   const note = d.querySelector('[data-share-note]');
   note.textContent = 'Making the image…';
+  d.querySelector('[data-share-img]').removeAttribute('src');
   d.showModal();
-  const canvas = await buildResultImage(info);
+  const canvas = await build(info);
   const blob = await new Promise((r) => canvas.toBlob(r, 'image/png'));
   const url = URL.createObjectURL(blob);
   d.querySelector('[data-share-img]').src = url;
@@ -388,10 +539,18 @@ export async function openShare(info, fileName) {
   note.textContent = canShareFile ? '' : 'Download the image, then post it anywhere.';
   go.onclick = async () => {
     try {
-      await navigator.share({ files: [file], title: `${EVENT.fullName} result`, text: `${info.winnerPlayers.join(' & ')} win ${info.winScore}–${info.loseScore}` });
+      await navigator.share({ files: [file], title: `${EVENT.fullName}`, text: shareText });
     } catch {
       /* the person closed the share sheet */
     }
   };
   return canvas;
+}
+
+export function openShare(info, fileName) {
+  return openCard(buildResultImage, info, fileName, 'Share result', `${info.winnerPlayers.join(' & ')} win ${info.winScore}–${info.loseScore}`);
+}
+
+export function openTeamShare(info, fileName) {
+  return openCard(buildTeamImage, info, fileName, 'Team journey', `${info.players.join(' & ')}: ${info.standing}. ${info.summary}`);
 }

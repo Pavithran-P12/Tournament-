@@ -96,6 +96,15 @@ test("numbered matches never start before a lower-numbered match in the same gro
   }
 });
 
+test('match numbers run in order: each match starts close to its number', () => {
+  const T = tournament();
+  for (const c of ['BMD', 'BWD', 'IMD', 'IXD']) {
+    const ms = T.matches.filter((m) => m.cat === c && m.no).sort((a, b) => a.start - b.start || a.no - b.no);
+    // position in the playing order never strays far from the match number
+    ms.forEach((m, i) => assert.ok(Math.abs(i + 1 - m.no) <= 25, `${c} match ${m.no} plays ${i + 1}th`));
+  }
+});
+
 test("league matches carry the organizer's match numbers", () => {
   const T = tournament();
   const no = (cat, n) => T.matches.find((m) => m.cat === cat && m.no === n);
@@ -107,6 +116,10 @@ test("league matches carry the organizer's match numbers", () => {
   assert.equal(T.matches.filter((m) => m.cat === 'BMD' && m.no).length, 60);
   assert.equal(T.matches.filter((m) => m.cat === 'IMD' && m.no).length, 40);
   assert.deepEqual([no('BWD', 4).a, no('BWD', 4).b], ['BWD-02', 'BWD-05']);
+  assert.deepEqual([no('IXD', 1).a, no('IXD', 1).b], ['IXD-01', 'IXD-04']);
+  assert.deepEqual([no('IXD', 10).a, no('IXD', 10).b], ['IXD-08', 'IXD-06']);
+  assert.deepEqual([no('IXD', 24).a, no('IXD', 24).b], ['IXD-15', 'IXD-16']);
+  assert.equal(T.matches.filter((m) => m.cat === 'IXD' && m.no).length, 24);
   assert.deepEqual([no('BWD', 10).a, no('BWD', 10).b], ['BWD-04', 'BWD-05']);
 });
 
