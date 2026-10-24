@@ -1,7 +1,7 @@
-import { EVENT } from './tournament-data.js?v=20261022w';
-import { tournament, standings, qualifiers, category } from './engine.js?v=20261022w';
-import { mountDrawNotice, startLoop, markActiveNav, paintLiveCount, fmtTime, esc, matchHref } from './ui.js?v=20261022w';
-import { matchCard, emptyState } from './components.js?v=20261022w';
+import { EVENT } from './tournament-data.js?v=20261024l';
+import { tournament, standings, category } from './engine.js?v=20261024l';
+import { mountDrawNotice, startLoop, markActiveNav, paintLiveCount, fmtTime, esc, matchHref } from './ui.js?v=20261024l';
+import { matchCard, emptyState } from './components.js?v=20261024l';
 
 const $ = (s) => document.querySelector(s);
 const T = tournament();
@@ -11,7 +11,7 @@ const ui = {
   cat: T.cats.some((c) => c.code === params.get('cat')) ? params.get('cat') : 'all',
   view: ['schedule', 'groups', 'knockout'].includes(params.get('view')) ? params.get('view') : 'schedule',
   status: ['live', 'upcoming', 'completed'].includes(params.get('status')) ? params.get('status') : 'all',
-  court: params.get('court') || 'all',
+  group: /^[A-D]$/.test(params.get('group') || '') ? params.get('group') : 'all',
   round: params.get('round') || 'all',
 };
 
@@ -20,7 +20,7 @@ function syncUrl() {
   if (ui.cat !== 'all') p.set('cat', ui.cat);
   if (ui.view !== 'schedule') p.set('view', ui.view);
   if (ui.status !== 'all') p.set('status', ui.status);
-  if (ui.court !== 'all') p.set('court', ui.court);
+  if (ui.group !== 'all') p.set('group', ui.group);
   if (ui.round !== 'all') p.set('round', ui.round);
   history.replaceState(null, '', `${location.pathname}${p.toString() ? `?${p}` : ''}`);
 }
@@ -28,8 +28,15 @@ function syncUrl() {
 /* ---------- controls ---------- */
 $('[data-cat-tabs]').innerHTML = [['all', 'All categories'], ...T.cats.map((c) => [c.code, c.short])]
   .map(([code, label]) => `<button type="button" role="tab" data-cat="${code}">${esc(label)}</button>`).join('');
-$('[data-court]').insertAdjacentHTML('beforeend', Array.from({ length: EVENT.courts }, (_, i) => `<option value="${i + 1}">Court ${i + 1}</option>`).join(''));
-$('[data-court]').value = ui.court;
+// Group options follow the selected category (Beginner Women's has a single group).
+function fillGroups() {
+  const cats = ui.cat === 'all' ? T.cats : [category(ui.cat)];
+  const letters = [...new Set(cats.flatMap((c) => Object.keys(c.groups)))].sort();
+  if (!letters.includes(ui.group)) ui.group = 'all';
+  const sel = $('[data-group]');
+  sel.innerHTML = `<option value="all">All groups</option>${letters.map((g) => `<option value="${g}">Group ${g}</option>`).join('')}`;
+  sel.value = ui.group;
+}
 const maxRound = Math.max(...T.matches.filter((m) => m.stage === 'league').map((m) => m.round));
 $('[data-round]').insertAdjacentHTML('beforeend', [
   ...Array.from({ length: maxRound }, (_, i) => [String(i + 1), `League round ${i + 1}`]),
@@ -42,6 +49,7 @@ function paintControls() {
   document.querySelectorAll('[data-view]').forEach((b) => b.setAttribute('aria-selected', String(b.dataset.view === ui.view)));
   document.querySelectorAll('[data-status]').forEach((b) => b.setAttribute('aria-pressed', String(b.dataset.status === ui.status)));
   $('[data-filters]').hidden = ui.view !== 'schedule';
+  fillGroups();
 }
 
 document.addEventListener('click', (e) => {
@@ -52,7 +60,7 @@ document.addEventListener('click', (e) => {
   if (b.dataset.status) ui.status = b.dataset.status;
   update();
 });
-$('[data-court]').addEventListener('change', (e) => { ui.court = e.target.value; update(); });
+$('[data-group]').addEventListener('change', (e) => { ui.group = e.target.value; update(); });
 $('[data-round]').addEventListener('change', (e) => { ui.round = e.target.value; update(); });
 
 /* ---------- views ---------- */
@@ -62,14 +70,14 @@ function scheduleView(states) {
     if (ui.cat !== 'all' && m.cat !== ui.cat) return false;
     if (ui.status === 'upcoming' && !(s.status === 'upcoming' || s.status === 'waiting')) return false;
     if (ui.status !== 'all' && ui.status !== 'upcoming' && s.status !== ui.status) return false;
-    if (ui.court !== 'all' && String(m.court) !== ui.court) return false;
+    if (ui.group !== 'all' && (m.stage !== 'league' || m.group !== ui.group)) return false;
     if (ui.round !== 'all') {
       if (['quarter', 'semi', 'final'].includes(ui.round)) { if (m.stage !== ui.round) return false; }
       else if (m.stage !== 'league' || String(m.round) !== ui.round) return false;
     }
     return true;
   });
-  if (!list.length) return emptyState('No matches match these filters. Try All courts or All rounds.');
+  if (!list.length) return emptyState('No matches match these filters. Try All groups or All rounds.');
   const slots = new Map();
   for (const s of list) {
     if (!slots.has(s.match.start)) slots.set(s.match.start, []);
@@ -94,8 +102,7 @@ document.addEventListener('click', (e) => {
 });
 
 const FORMAT_NOTE = {
-  qf8: 'Group winners and the two best runners-up go through to the quarter-finals.',
-  sf4: 'Group winners go through to the semi-finals: A v C and B v D.',
+  qf: 'The top two of each group go through to the quarter-finals: A1 v B2, C1 v D2, B1 v A2, D1 v C2.',
   final2: 'The top two teams play the final.',
 };
 
@@ -109,22 +116,20 @@ function groupsView(states) {
       <li><span class="q-badge">Q</span> In a qualifying place right now</li>
       <li class="q-legend-tip">Tap or hover a team to see its fixtures</li>
     </ul>
-    <div class="group-grid">${Object.keys(c.teamsByGroup).map((g) => groupCard(c, g, states)).join('')}
-    ${c.format === 'qf8' ? runnersUpCard(c, states) : ''}</div>
+    <div class="group-grid">${Object.keys(c.teamsByGroup).map((g) => groupCard(c, g, states)).join('')}</div>
   </section>`).join('');
 }
 
 function groupCard(c, letter, states) {
   const t = standings(c.code, letter, states);
-  const through = c.format === 'final2' ? 2 : 1;
+  const through = 2;
   const matches = T.matches.filter((m) => m.cat === c.code && m.stage === 'league' && m.group === letter);
   let note = '';
   if (t.complete && t.needsDecision) note = '<p class="group-note warn">Level on the qualifying places. The organizer decides who goes through.</p>';
   else if (t.complete) {
     const w = esc(t.rows[0].team.name);
     if (c.format === 'final2') note = `<p class="group-note">${w} and ${esc(t.rows[1].team.name)} play the final.</p>`;
-    else if (c.format === 'sf4') note = `<p class="group-note">${w} go through to semi-final ${letter === 'A' || letter === 'C' ? 1 : 2}.</p>`;
-    else note = `<p class="group-note">${w} go through to the quarter-finals.</p>`;
+    else note = `<p class="group-note">${w} and ${esc(t.rows[1].team.name)} go through to the quarter-finals.</p>`;
   }
   const single = Object.keys(c.teamsByGroup).length === 1;
   // Q appears as soon as the group has a result; it is outlined until the group is complete.
@@ -169,20 +174,6 @@ function teamFixtures(teamId, matches, states) {
   }).join('')}</ul>`;
 }
 
-function runnersUpCard(c, states) {
-  const q = qualifiers(c.code, states);
-  return `<article class="group-card">
-    <header><h3>Best runners-up</h3><span>${q.complete ? 'Final' : 'Updates as groups finish'}</span></header>
-    <table class="table">
-      <thead><tr><th scope="col"><span class="sr-only">Position</span></th><th scope="col">Team</th><th scope="col">Group</th><th scope="col" title="Won">W</th><th scope="col" title="Point difference">+/−</th><th scope="col" title="Points scored">Pts</th></tr></thead>
-      <tbody>${q.runnersUp.map((r, i) => `<tr class="${i < 2 && q.complete ? 'is-through' : ''}">
-        <td>${i + 1}</td><td class="t-team">${esc(r.team.name)}</td><td>${r.group}</td><td><strong>${r.won}</strong></td><td>${r.pd > 0 ? '+' : ''}${r.pd}</td><td>${r.pf}</td>
-      </tr>`).join('')}</tbody>
-    </table>
-    <p class="group-note">The top two join the six group winners in the quarter-finals. Ranked by wins, then point difference, then points scored.</p>
-  </article>`;
-}
-
 const STAGES = [['quarter', 'Quarter-finals'], ['semi', 'Semi-finals'], ['final', 'Final']];
 
 function knockoutView(states) {
@@ -219,8 +210,8 @@ function render(states) {
   $('[data-view-body]').innerHTML = body;
 }
 function update() {
-  syncUrl();
   paintControls();
+  syncUrl();
   if (lastStates) render(lastStates);
 }
 paintControls();

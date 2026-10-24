@@ -1,8 +1,8 @@
 // Shared page helpers: results data, scorer access, formatting and the page refresh loop.
 
-import { EVENT } from './tournament-data.js?v=20261022w';
-import { tournament, snapshot } from './engine.js?v=20261022w';
-import { replay } from './scoring.js?v=20261022w';
+import { EVENT } from './tournament-data.js?v=20261024l';
+import { tournament, snapshot } from './engine.js?v=20261024l';
+import { replay } from './scoring.js?v=20261024l';
 
 /* ---------- storage (best effort; the pages work without it) ---------- */
 function load(store, key, fallback) {
@@ -180,7 +180,7 @@ export function esc(s) {
 export const matchHref = (id) => `match.html#${encodeURIComponent(id)}`;
 
 export function stageLabel(m) {
-  if (m.stage === 'league') return `Group ${m.group}, round ${m.round}`;
+  if (m.stage === 'league') return m.no ? `Group ${m.group}, match ${m.no}` : `Group ${m.group}, round ${m.round}`;
   return m.label;
 }
 export function teamLabel(st, side, { full = false } = {}) {
@@ -221,10 +221,13 @@ export function startLoop(render) {
 
 /** Shown until the real draw is entered in tournament-data.js. */
 export function mountDrawNotice() {
-  if (EVENT.drawPublished) return;
+  const text = !EVENT.drawPublished
+    ? '<strong>Sample draw.</strong> The real fixtures are published here 24 hours before play.'
+    : EVENT.timesTentative ? '<strong>Match times are tentative.</strong> Courts are called in order on the day, so be ready before your time.' : '';
+  if (!text) return;
   const n = document.createElement('div');
   n.className = 'draw-notice';
-  n.innerHTML = '<strong>Sample draw.</strong> The real fixtures are published here 24 hours before play.';
+  n.innerHTML = text;
   document.body.prepend(n);
 }
 

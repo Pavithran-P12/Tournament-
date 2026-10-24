@@ -2,8 +2,8 @@
 // Match results come from the scorers (published results file plus this device). The seeded
 // simulation is only used by tests and previews (snapshot(..., { simulate: true })).
 
-import { EVENT, CATEGORIES, KNOCKOUT_SLOTS, TEAMS, SAME_PERSON, rng } from './tournament-data.js?v=20261022w';
-import { FORMATS, summarize } from './scoring.js?v=20261022w';
+import { EVENT, CATEGORIES, TEAMS, SAME_PERSON, rng } from './tournament-data.js?v=20261024l';
+import { FORMATS, summarize } from './scoring.js?v=20261024l';
 
 /** Round-robin rounds (circle method). Odd group sizes get a bye each round. */
 export function roundRobin(n) {
@@ -42,25 +42,22 @@ export const personKey = (name) => {
   return SAME_PERSON[k] ?? k;
 };
 
+// Group refs { g, r } are "rank r of group g"; { w } is the winner of an earlier knockout match.
 const KO = {
-  qf8: [
-    { id: 'QF1', stage: 'quarter', label: 'Quarter-final 1', from: [{ q: 1 }, { q: 8 }] },
-    { id: 'QF2', stage: 'quarter', label: 'Quarter-final 2', from: [{ q: 4 }, { q: 5 }] },
-    { id: 'QF3', stage: 'quarter', label: 'Quarter-final 3', from: [{ q: 2 }, { q: 7 }] },
-    { id: 'QF4', stage: 'quarter', label: 'Quarter-final 4', from: [{ q: 3 }, { q: 6 }] },
+  qf: [
+    { id: 'QF1', stage: 'quarter', label: 'Quarter-final 1', from: [{ g: 'A', r: 1 }, { g: 'B', r: 2 }] },
+    { id: 'QF2', stage: 'quarter', label: 'Quarter-final 2', from: [{ g: 'C', r: 1 }, { g: 'D', r: 2 }] },
+    { id: 'QF3', stage: 'quarter', label: 'Quarter-final 3', from: [{ g: 'B', r: 1 }, { g: 'A', r: 2 }] },
+    { id: 'QF4', stage: 'quarter', label: 'Quarter-final 4', from: [{ g: 'D', r: 1 }, { g: 'C', r: 2 }] },
     { id: 'SF1', stage: 'semi', label: 'Semi-final 1', from: [{ w: 'QF1' }, { w: 'QF2' }] },
     { id: 'SF2', stage: 'semi', label: 'Semi-final 2', from: [{ w: 'QF3' }, { w: 'QF4' }] },
-    { id: 'F', stage: 'final', label: 'Final', from: [{ w: 'SF1' }, { w: 'SF2' }] },
-  ],
-  sf4: [
-    { id: 'SF1', stage: 'semi', label: 'Semi-final 1', from: [{ g: 'A', r: 1 }, { g: 'C', r: 1 }] },
-    { id: 'SF2', stage: 'semi', label: 'Semi-final 2', from: [{ g: 'B', r: 1 }, { g: 'D', r: 1 }] },
     { id: 'F', stage: 'final', label: 'Final', from: [{ w: 'SF1' }, { w: 'SF2' }] },
   ],
   final2: [
     { id: 'F', stage: 'final', label: 'Final', from: [{ g: 'A', r: 1 }, { g: 'A', r: 2 }] },
   ],
 };
+const STAGE_ORDER = { quarter: 0, semi: 1, final: 2 };
 
 const ORDINAL = ['', '1st', '2nd', '3rd', '4th', '5th', '6th'];
 export function refLabel(ref) {
@@ -104,6 +101,16 @@ export function tournament() {
       }
     }
   }
+  // Organizer's match numbers: groups in order, matches in pairings order (Match 1, 2, 3 ...).
+  for (const c of cats.filter((x) => x.numbered)) {
+    let no = 0;
+    for (const letter of Object.keys(c.groups)) {
+      for (const [a, b] of c.pairings[letter].flat()) {
+        no++;
+        league.find((m) => m.cat === c.code && m.a === a && m.b === b).no = no;
+      }
+    }
+  }
   const counters = {};
   for (const m of league) {
     const key = `${m.cat}-${m.group}`;
@@ -114,47 +121,133 @@ export function tournament() {
 
   // Court schedule: each slot takes the next matches whose players are free and did not play in the
   // previous slot. Nobody is ever on two courts at once; rest is only relaxed if nothing else fits.
-  const matches = [];
-  const queue = league.slice();
-  let slot = 0;
-  let prev = new Set();
-  while (queue.length) {
-    const start = EVENT.dayStart + slot * EVENT.leagueSlot;
-    const busy = new Set();
-    const placed = [];
-    for (const allowBackToBack of [false, true]) {
-      for (let i = 0; i < queue.length && placed.length < EVENT.courts; ) {
-        const m = queue[i];
-        if (m.people.some((p) => busy.has(p) || (!allowBackToBack && prev.has(p)))) { i++; continue; }
-        queue.splice(i, 1);
+  // A category's matches never start before its startAt time. Teams with the most matches still to
+  // play go first; remaining ties are broken by a fixed seeded shuffle, and the best of a few hundred
+  // seeds is kept (earliest finish, then fewest back-to-back matches). Same data, same schedule.
+  const startAt = Object.fromEntries(cats.map((c) => [c.code, c.startAt ?? EVENT.dayStart]));
+  const planLeague = (seed) => {
+    const rand = rng(`league-${seed}`);
+    const tie = new Map(league.map((m) => [m, rand()]));
+    const queue = league.slice();
+    const plan = [];
+    let slot = 0;
+    let prev = new Set();
+    let backToBack = 0;
+    while (queue.length) {
+      const start = EVENT.dayStart + slot * EVENT.leagueSlot;
+      const busy = new Set();
+      const placed = [];
+      const left = {};
+      for (const m of queue) { left[m.a] = (left[m.a] || 0) + 1; left[m.b] = (left[m.b] || 0) + 1; }
+      const load = (m) => left[m.a] + left[m.b];
+      queue.sort((x, y) => startAt[x.cat] - startAt[y.cat] || x.round - y.round || (x.no ?? 0) - (y.no ?? 0) || load(y) - load(x) || tie.get(x) - tie.get(y));
+      // Numbered fixtures keep the organizer's order within a group: Match 10 never starts before Match 9.
+      const inOrder = (m) => !m.no || !queue.some((x) => x.cat === m.cat && x.group === m.group && x.no && x.no < m.no);
+      const fits = (m, allowBackToBack) => start >= startAt[m.cat] && inOrder(m) && !m.people.some((p) => busy.has(p) || (!allowBackToBack && prev.has(p)));
+      const take = (m, allowBackToBack) => {
+        queue.splice(queue.indexOf(m), 1);
         m.people.forEach((p) => busy.add(p));
         placed.push(m);
+        if (allowBackToBack) backToBack++;
+      };
+      // Earlier sessions go first, but a category with minCourts keeps that many courts once it has started.
+      for (const c of cats.filter((x) => x.minCourts)) {
+        for (let k = 0; k < c.minCourts && placed.length < EVENT.courts; k++) {
+          const m = queue.find((x) => x.cat === c.code && fits(x, false));
+          if (m) take(m, false);
+        }
       }
-      if (placed.length) break;
+      for (const allowBackToBack of [false, true]) {
+        for (let i = 0; i < queue.length && placed.length < EVENT.courts; ) {
+          const m = queue[i];
+          if (!fits(m, allowBackToBack)) { i++; continue; }
+          take(m, allowBackToBack);
+        }
+        if (placed.length) break;
+      }
+      placed.forEach((m, k) => plan.push([m, k + 1, start]));
+      prev = busy;
+      slot++;
     }
-    placed.forEach((m, k) => Object.assign(m, { court: k + 1, start, end: start + EVENT.leagueSlot - 2 }));
-    matches.push(...placed);
-    prev = busy;
-    slot++;
+    return { plan, slot, backToBack, score: slot * 1000 + backToBack * 10 + Math.max(...plan.filter(([m]) => startAt[m.cat] === EVENT.dayStart).map(([, , t]) => t)) / 100 };
+  };
+  let bestPlan = null;
+  for (let seed = 0; seed < 300; seed++) {
+    const p = planLeague(seed);
+    if (!bestPlan || p.score < bestPlan.score) bestPlan = p;
   }
+  const matches = [];
+  for (const [m, court, start] of bestPlan.plan) {
+    Object.assign(m, { court, start, end: start + EVENT.leagueSlot - 2 });
+    matches.push(m);
+  }
+  const slot = bestPlan.slot;
   const leagueEnd = EVENT.dayStart + slot * EVENT.leagueSlot;
 
-  // Knockouts in the agreed running order.
+  // Knockouts. Who could reach each match is known from the draw (the teams of the feeding groups),
+  // so two knockout matches only overlap in time when no player could be needed on both courts.
+  const groupPeople = (cat, g) => people(cats.find((c) => c.code === cat).groups[g]);
   const koById = {};
   for (const c of cats) {
     for (const k of KO[c.format]) {
-      const m = { ...k, id: `${c.code}-${k.id}`, cat: c.code, format: FORMATS.knockout };
+      const m = { ...k, id: `${c.code}-${k.id}`, cat: c.code, format: k.stage === 'quarter' ? FORMATS.quarter : FORMATS.knockout };
       m.fromLabels = m.from.map(refLabel);
+      m.deps = m.from.filter((ref) => ref.w).map((ref) => `${c.code}-${ref.w}`);
+      m.pool = new Set(m.from.flatMap((ref) => (ref.g ? groupPeople(c.code, ref.g) : [...koById[`${c.code}-${ref.w}`].pool])));
+      m.length = k.stage === 'quarter' ? EVENT.quarterSlot : EVENT.knockoutSlot;
       koById[m.id] = m;
     }
   }
-  const koStart = leagueEnd + 10;
-  KNOCKOUT_SLOTS.forEach((ids, s) => {
-    const start = koStart + s * EVENT.knockoutSlot;
-    ids.forEach((id, k) => Object.assign(koById[id], { court: k + 1, start, end: start + EVENT.knockoutSlot - 2 }));
-  });
+  // List scheduling from knockoutStart: whenever a court comes free it takes the waiting match with the
+  // highest priority whose feeding matches are over. Priorities are seeded shuffles weighted towards
+  // long chains (quarter -> semi -> final); the best of a few hundred seeds is kept: earliest finish,
+  // then fewest overlaps between matches a player entered in two categories could both reach.
+  // Knockouts start at knockoutStart, or after the league with a short break if it runs later.
+  const koStart = Math.max(EVENT.knockoutStart, leagueEnd + EVENT.knockoutBreak);
+  const all = Object.values(koById);
+  const tail = (m) => m.length + Math.max(0, ...all.filter((x) => x.deps.includes(m.id)).map(tail));
+  const tails = new Map(all.map((m) => [m, tail(m)]));
+  const shares = (m, o) => o.cat !== m.cat && [...m.pool].some((p) => o.pool.has(p));
+  const planKo = (seed) => {
+    const rand = rng(`knockout-${seed}`);
+    const key = new Map(all.map((m) => [m, tails.get(m) + rand() * 48]));
+    const avoid = seed % 2 === 0;
+    const at = new Map();
+    const courtFree = Array(EVENT.courts).fill(koStart);
+    const pending = all.slice();
+    const readyAt = (m) => Math.max(koStart, ...m.deps.map((d) => at.get(koById[d]).start + koById[d].length + EVENT.knockoutRest));
+    const overlapsAt = (m, t) => [...at].some(([o, p]) => p.start < t + m.length && t < p.start + o.length && shares(m, o));
+    while (pending.length) {
+      const now = Math.min(...courtFree);
+      const court = courtFree.indexOf(now);
+      const known = pending.filter((m) => m.deps.every((d) => at.has(koById[d])));
+      let ready = known.filter((m) => readyAt(m) <= now);
+      if (!ready.length) {
+        courtFree[court] = Math.min(...courtFree.filter((f) => f > now), ...known.map(readyAt).filter((t) => t > now));
+        continue;
+      }
+      if (avoid && ready.some((m) => !overlapsAt(m, now))) ready = ready.filter((m) => !overlapsAt(m, now));
+      const m = ready.sort((x, y) => key.get(y) - key.get(x))[0];
+      at.set(m, { court: court + 1, start: now });
+      courtFree[court] = now + m.length;
+      pending.splice(pending.indexOf(m), 1);
+    }
+    const end = Math.max(...[...at].map(([m, p]) => p.start + m.length));
+    let overlaps = 0;
+    const list = [...at];
+    for (let x = 0; x < list.length; x++) for (let y = x + 1; y < list.length; y++) {
+      const [m, p] = list[x]; const [o, q] = list[y];
+      if (p.start < q.start + o.length && q.start < p.start + m.length && shares(m, o)) overlaps++;
+    }
+    return { at, score: end * 1000 + overlaps };
+  };
+  let bestKo = null;
+  for (let seed = 0; seed < 400; seed++) {
+    const p = planKo(seed);
+    if (!bestKo || p.score < bestKo.score) bestKo = p;
+  }
+  for (const [m, p] of bestKo.at) Object.assign(m, { court: p.court, start: p.start, end: p.start + m.length - 2 });
   const ko = Object.values(koById);
-  if (ko.some((m) => m.start === undefined)) throw new Error('A knockout match is missing from KNOCKOUT_SLOTS');
   matches.push(...ko);
   matches.sort((x, y) => x.start - y.start || x.court - y.court);
 
@@ -235,6 +328,17 @@ export function snapshot(t, overrides = {}, { simulate = false } = {}) {
     if (st.status === 'completed' && st.score.winner) st.winnerTeam = st.score.winner === 'A' ? a : b;
     states[m.id] = st;
   }
+  // A player entered in two categories can reach two knockout matches that overlap in the schedule.
+  // Once the teams are known, flag the later match: it starts when both matches' players are free.
+  const ko = Object.values(states).filter((s) => s.match.stage !== 'league' && s.a && s.b);
+  const peopleOf = (s) => [...s.a.players, ...s.b.players].map(personKey);
+  for (const s of ko) {
+    if (s.status !== 'upcoming') continue;
+    const mine = peopleOf(s);
+    const other = ko.find((o) => o !== s && o.match.cat !== s.match.cat && o.status !== 'completed'
+      && o.match.start <= s.match.start && s.match.start < o.match.end + 2 && peopleOf(o).some((p) => mine.includes(p)));
+    if (other) s.clash = other.match;
+  }
   return states;
 }
 
@@ -285,7 +389,7 @@ export function standings(catCode, letter, states) {
     r.tiedWithNext = !!next && next.won === r.won && next.pd === r.pd && next.pf === r.pf && rows.filter((q) => q.won === r.won).length > 2;
   });
   const complete = done === groupMatches.length;
-  const places = cat.format === 'final2' ? 2 : 1;
+  const places = 2; // the top two of every group go through
   return {
     letter, rows, complete, played: done, total: groupMatches.length,
     needsDecision: complete && rows.slice(0, places).some((r) => r.tiedWithNext),

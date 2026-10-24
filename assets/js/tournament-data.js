@@ -1,5 +1,6 @@
 // Tournament configuration. Event details come from the published poster.
 // Teams and groups below are the official entry list and the random draw done on 22 October 2026 (Beginner Men's redrawn into groups of 6 the same evening).
+// Entry list updated 24 October 2026 (organizer's final list). Groups are provisional until the organizer's split is entered.
 
 export const EVENT = {
   name: 'ThirdSpace Play',
@@ -9,14 +10,20 @@ export const EVENT = {
   date: '2026-10-25',
   dateLabel: 'Sunday 25 October 2026',
   dayStart: 9 * 60, // minutes from midnight
-  dayEnd: 16 * 60,
+  dayEnd: 17 * 60, // times are tentative; the day may run past 4 PM
   venue: 'Rapid Sports Academy',
   area: 'Perungudi, Chennai',
   courts: 5,
   // false shows a "Sample draw" notice on every page.
   drawPublished: true,
-  leagueSlot: 14, // minutes per league match slot (15-point game plus changeover)
-  knockoutSlot: 35, // minutes per knockout slot (best of 3 games to 21, plus changeover)
+  leagueSlot: 12, // minutes per league match slot (15-point game plus changeover)
+  knockoutStart: 14 * 60, // quarter-finals, semi-finals and finals from 2 PM at the earliest
+  knockoutBreak: 10, // minutes between the last league match and the first knockout if the league runs past knockoutStart
+  timesTentative: true, // shows "times are tentative" on the schedule
+  quarterSlot: 16, // minutes per quarter-final (single game to 21, plus changeover)
+  knockoutSlot: 32, // minutes per semi-final or final (best of 3 games to 21, plus changeover)
+  knockoutRest: 0, // extra minutes between a team's knockout matches
+  knockoutWait: 0, // minutes a knockout match may be held back to avoid a player needed on two courts
   firstServer: 'A',
   includes: [
     { title: 'Yonex Mavis 350', detail: 'Nylon shuttles for every match' },
@@ -24,7 +31,7 @@ export const EVENT = {
     { title: 'Trophies', detail: 'Winner and runner-up in every category' },
   ],
   rules: [
-    'Every team plays 3 league matches. League matches are a single game to 15 points. Knockout matches are best of 3 games to 21 points. Rally scoring, with a golden point instead of deuce.',
+    'League matches are a single game to 15 points. Quarter-finals are a single game to 21. Semi-finals and finals are best of 3 games to 21. Rally scoring, with a golden point instead of deuce.',
     'Beginner: players with little or no tournament experience. Intermediate: players with tournament experience who have never won or been runner-up in a tournament.',
     'Open or advanced players, district, state or national-level players and tournament winners or runners-up are not eligible. If found, they will be removed from the tournament with no refund.',
     'Players must play in the correct category for their level. Incorrect level declaration may result in disqualification.',
@@ -36,40 +43,41 @@ export const EVENT = {
 };
 
 // Knockout formats:
-//   qf8    6 group winners + 2 best runners-up -> quarter-finals -> semi-finals -> final (not used now)
-//   sf4    4 group winners -> semi-finals (A1 v C1, B1 v D1) -> final
+//   qf     top two of 4 groups -> quarter-finals (A1 v B2, C1 v D2, B1 v A2, D1 v C2) -> semi-finals -> final
 //   final2 single group -> 1st v 2nd in the final
+// numbered: league matches carry the organizer's match numbers (in pairings order).
+// startAt: the earliest time (minutes from midnight) the category's league matches can start. Earlier categories get
+// courts first; minCourts guarantees a category that many courts once it has started.
 export const CATEGORIES = [
-  { code: 'BMD', name: "Beginner Men's Doubles", short: "Beginner Men's", level: 'Beginner', format: 'sf4',
-    groups: { A: ['BMD-06', 'BMD-12', 'BMD-04', 'BMD-10', 'BMD-01', 'BMD-08'], B: ['BMD-20', 'BMD-21', 'BMD-16', 'BMD-14', 'BMD-24', 'BMD-02'], C: ['BMD-18', 'BMD-19', 'BMD-07', 'BMD-03', 'BMD-22', 'BMD-11'], D: ['BMD-23', 'BMD-15', 'BMD-13', 'BMD-17', 'BMD-05', 'BMD-09'] },
-    // Groups of 6 where each team plays only 3 randomly drawn opponents (3 rounds, no repeats).
+  { code: 'BMD', name: "Beginner Men's Doubles", short: "Beginner Men's", level: 'Beginner', format: 'qf', startAt: 9 * 60, numbered: true,
+    groups: { A: ['BMD-01', 'BMD-02', 'BMD-03', 'BMD-04', 'BMD-05', 'BMD-06'], B: ['BMD-07', 'BMD-08', 'BMD-09', 'BMD-10', 'BMD-11', 'BMD-12'], C: ['BMD-13', 'BMD-14', 'BMD-15', 'BMD-16', 'BMD-17', 'BMD-18'], D: ['BMD-19', 'BMD-20', 'BMD-21', 'BMD-22', 'BMD-23', 'BMD-24'] },
+    // Organizer's fixtures (24 Oct): full round robin, matches 1-60 in this order, 3 per round.
     pairings: {
-      A: [[['BMD-08', 'BMD-12'], ['BMD-04', 'BMD-10'], ['BMD-06', 'BMD-01']], [['BMD-01', 'BMD-12'], ['BMD-04', 'BMD-08'], ['BMD-06', 'BMD-10']], [['BMD-06', 'BMD-12'], ['BMD-01', 'BMD-04'], ['BMD-10', 'BMD-08']]],
-      B: [[['BMD-20', 'BMD-21'], ['BMD-24', 'BMD-16'], ['BMD-14', 'BMD-02']], [['BMD-16', 'BMD-21'], ['BMD-14', 'BMD-20'], ['BMD-24', 'BMD-02']], [['BMD-14', 'BMD-24'], ['BMD-21', 'BMD-02'], ['BMD-16', 'BMD-20']]],
-      C: [[['BMD-07', 'BMD-03'], ['BMD-18', 'BMD-19'], ['BMD-22', 'BMD-11']], [['BMD-07', 'BMD-22'], ['BMD-18', 'BMD-03'], ['BMD-19', 'BMD-11']], [['BMD-11', 'BMD-03'], ['BMD-18', 'BMD-07'], ['BMD-22', 'BMD-19']]],
-      D: [[['BMD-15', 'BMD-13'], ['BMD-09', 'BMD-05'], ['BMD-17', 'BMD-23']], [['BMD-05', 'BMD-17'], ['BMD-15', 'BMD-23'], ['BMD-13', 'BMD-09']], [['BMD-15', 'BMD-05'], ['BMD-13', 'BMD-23'], ['BMD-09', 'BMD-17']]],
+      A: [[['BMD-01', 'BMD-06'], ['BMD-02', 'BMD-05'], ['BMD-03', 'BMD-04']], [['BMD-01', 'BMD-05'], ['BMD-06', 'BMD-04'], ['BMD-02', 'BMD-03']], [['BMD-01', 'BMD-04'], ['BMD-05', 'BMD-03'], ['BMD-06', 'BMD-02']], [['BMD-01', 'BMD-03'], ['BMD-04', 'BMD-02'], ['BMD-05', 'BMD-06']], [['BMD-01', 'BMD-02'], ['BMD-03', 'BMD-06'], ['BMD-04', 'BMD-05']]],
+      B: [[['BMD-07', 'BMD-12'], ['BMD-08', 'BMD-11'], ['BMD-09', 'BMD-10']], [['BMD-07', 'BMD-11'], ['BMD-12', 'BMD-10'], ['BMD-08', 'BMD-09']], [['BMD-07', 'BMD-10'], ['BMD-11', 'BMD-09'], ['BMD-12', 'BMD-08']], [['BMD-07', 'BMD-09'], ['BMD-10', 'BMD-08'], ['BMD-11', 'BMD-12']], [['BMD-07', 'BMD-08'], ['BMD-09', 'BMD-12'], ['BMD-10', 'BMD-11']]],
+      C: [[['BMD-13', 'BMD-18'], ['BMD-14', 'BMD-17'], ['BMD-15', 'BMD-16']], [['BMD-13', 'BMD-17'], ['BMD-18', 'BMD-16'], ['BMD-14', 'BMD-15']], [['BMD-13', 'BMD-16'], ['BMD-17', 'BMD-15'], ['BMD-18', 'BMD-14']], [['BMD-13', 'BMD-15'], ['BMD-16', 'BMD-14'], ['BMD-17', 'BMD-18']], [['BMD-13', 'BMD-14'], ['BMD-15', 'BMD-18'], ['BMD-16', 'BMD-17']]],
+      D: [[['BMD-19', 'BMD-24'], ['BMD-20', 'BMD-23'], ['BMD-21', 'BMD-22']], [['BMD-19', 'BMD-23'], ['BMD-24', 'BMD-22'], ['BMD-20', 'BMD-21']], [['BMD-19', 'BMD-22'], ['BMD-23', 'BMD-21'], ['BMD-24', 'BMD-20']], [['BMD-19', 'BMD-21'], ['BMD-22', 'BMD-20'], ['BMD-23', 'BMD-24']], [['BMD-19', 'BMD-20'], ['BMD-21', 'BMD-24'], ['BMD-22', 'BMD-23']]],
     } },
-  { code: 'BWD', name: "Beginner Women's Doubles", short: "Beginner Women's", level: 'Beginner', format: 'final2',
-    groups: { A: ['BWD-02', 'BWD-01', 'BWD-04', 'BWD-03'] } },
-  { code: 'IMD', name: "Intermediate Men's Doubles", short: "Intermediate Men's", level: 'Intermediate', format: 'sf4',
-    groups: { A: ['IMD-10', 'IMD-09', 'IMD-04', 'IMD-13', 'IMD-05', 'IMD-02'], B: ['IMD-06', 'IMD-01', 'IMD-16', 'IMD-07'], C: ['IMD-17', 'IMD-03', 'IMD-14', 'IMD-15'], D: ['IMD-12', 'IMD-11', 'IMD-18', 'IMD-08'] },
-    // Group A has 6 teams, each playing 3 randomly drawn opponents (IMD-02 moved from group B by random draw).
+  { code: 'BWD', name: "Beginner Women's Doubles", short: "Beginner Women's", level: 'Beginner', format: 'final2', startAt: 9 * 60, numbered: true,
+    groups: { A: ['BWD-01', 'BWD-02', 'BWD-03', 'BWD-04', 'BWD-05'] },
+    // Organizer's fixture sheet (24 Oct): full round robin, matches 1-10 in this order, 2 per round (one team rests).
     pairings: {
-      A: [[['IMD-10', 'IMD-09'], ['IMD-02', 'IMD-05'], ['IMD-13', 'IMD-04']], [['IMD-13', 'IMD-10'], ['IMD-02', 'IMD-04'], ['IMD-05', 'IMD-09']], [['IMD-09', 'IMD-13'], ['IMD-02', 'IMD-10'], ['IMD-04', 'IMD-05']]],
+      A: [[['BWD-01', 'BWD-02'], ['BWD-03', 'BWD-04']], [['BWD-01', 'BWD-03'], ['BWD-02', 'BWD-05']], [['BWD-01', 'BWD-04'], ['BWD-03', 'BWD-05']], [['BWD-01', 'BWD-05'], ['BWD-02', 'BWD-04']], [['BWD-02', 'BWD-03'], ['BWD-04', 'BWD-05']]],
     } },
-  { code: 'IXD', name: "Intermediate Mixed Doubles", short: "Intermediate Mixed", level: 'Intermediate', format: 'sf4',
-    groups: { A: ['IXD-07', 'IXD-11', 'IXD-13', 'IXD-14'], B: ['IXD-01', 'IXD-05', 'IXD-04', 'IXD-08'], C: ['IXD-06', 'IXD-17', 'IXD-12', 'IXD-16'], D: ['IXD-10', 'IXD-15', 'IXD-03', 'IXD-02'] } },
+  { code: 'IMD', name: "Intermediate Men's Doubles", short: "Intermediate Men's", level: 'Intermediate', format: 'qf', startAt: 10 * 60 + 45, minCourts: 1, numbered: true,
+    groups: { A: ['IMD-01', 'IMD-02', 'IMD-03', 'IMD-04', 'IMD-05'], B: ['IMD-06', 'IMD-07', 'IMD-08', 'IMD-09', 'IMD-10'], C: ['IMD-11', 'IMD-12', 'IMD-13', 'IMD-14', 'IMD-15'], D: ['IMD-16', 'IMD-17', 'IMD-18', 'IMD-19', 'IMD-20'] },
+    // Organizer's fixtures (24 Oct): full round robin, matches 1-40 in this order, 2 per round (one team rests).
+    pairings: {
+      A: [[['IMD-01', 'IMD-02'], ['IMD-03', 'IMD-04']], [['IMD-01', 'IMD-03'], ['IMD-02', 'IMD-05']], [['IMD-01', 'IMD-04'], ['IMD-03', 'IMD-05']], [['IMD-01', 'IMD-05'], ['IMD-02', 'IMD-04']], [['IMD-02', 'IMD-03'], ['IMD-04', 'IMD-05']]],
+      B: [[['IMD-06', 'IMD-07'], ['IMD-08', 'IMD-09']], [['IMD-06', 'IMD-08'], ['IMD-07', 'IMD-10']], [['IMD-06', 'IMD-09'], ['IMD-08', 'IMD-10']], [['IMD-06', 'IMD-10'], ['IMD-07', 'IMD-09']], [['IMD-07', 'IMD-08'], ['IMD-09', 'IMD-10']]],
+      C: [[['IMD-11', 'IMD-12'], ['IMD-13', 'IMD-14']], [['IMD-11', 'IMD-13'], ['IMD-12', 'IMD-15']], [['IMD-11', 'IMD-14'], ['IMD-13', 'IMD-15']], [['IMD-11', 'IMD-15'], ['IMD-12', 'IMD-14']], [['IMD-12', 'IMD-13'], ['IMD-14', 'IMD-15']]],
+      D: [[['IMD-16', 'IMD-17'], ['IMD-18', 'IMD-19']], [['IMD-16', 'IMD-18'], ['IMD-17', 'IMD-20']], [['IMD-16', 'IMD-19'], ['IMD-18', 'IMD-20']], [['IMD-16', 'IMD-20'], ['IMD-17', 'IMD-19']], [['IMD-17', 'IMD-18'], ['IMD-19', 'IMD-20']]],
+    } },
+  { code: 'IXD', name: "Intermediate Mixed Doubles", short: "Intermediate Mixed", level: 'Intermediate', format: 'qf', startAt: 10 * 60 + 45, minCourts: 1,
+    groups: { A: ['IXD-07', 'IXD-10', 'IXD-12', 'IXD-13'], B: ['IXD-01', 'IXD-05', 'IXD-04', 'IXD-08'], C: ['IXD-06', 'IXD-16', 'IXD-11', 'IXD-15'], D: ['IXD-09', 'IXD-14', 'IXD-03', 'IXD-02'] } },
 ];
 
-// Knockout running order. Categories that share players never play knockouts in the same slot.
-export const KNOCKOUT_SLOTS = [
-  ['BMD-SF1', 'BMD-SF2', 'IMD-SF1', 'IMD-SF2', 'BWD-F'],
-  ['IXD-SF1', 'IXD-SF2'],
-  ['BMD-F', 'IMD-F'],
-  ['IXD-F'],
-];
-
-// Entry number -> players, spelled as given by the organizer (each word capitalised). IXD-09 was a duplicate of IXD-06 and is removed.
+// Entry number -> players, numbered as in the organizer's list of 24 October 2026 (each word capitalised).
 export const TEAMS = {
   'IMD-01': ["Raj Prabhu", "Anthony Mugilan"],
   'IMD-02': ["Pavan", "Gnalan"],
@@ -83,16 +91,18 @@ export const TEAMS = {
   'IMD-10': ["Savio Marx Sekar", "Balasubramani Kanagasundaram"],
   'IMD-11': ["GokulRaj Raja", "Saran Balasubramaniam"],
   'IMD-12': ["Dhanu Jayan Rajesh", "Mohannedfayaz Zubair"],
-  'IMD-13': ["Giridharan Neelakandan", "Sateeshwaran Kothandaraman"],
+  'IMD-13': ["Giridharan Neelakandan", "Satheeshwaran Kothandapani"],
   'IMD-14': ["Kode Balakrishnan", "Gaurishankar Binu T"],
   'IMD-15': ["Senthil Kumar Uthiravel", "Madesh Velmurugan"],
   'IMD-16': ["Natarajan Mani", "Prakash Srinivasan"],
   'IMD-17': ["Maheswaran Muthu", "Rajesh Chinu"],
   'IMD-18': ["Saravanan Sundarababu", "Ishanth Rajagopal"],
+  'IMD-19': ["Lokesh Aarumugam", "Nithin Dinesh"],
+  'IMD-20': ["Clifford Sam Noel", "Vignesh Mani"],
   'BMD-01': ["Sathish Krishnamoorthy", "Prajith Nair"],
   'BMD-02': ["Sabarish Prem", "Ravi Raghul. H"],
   'BMD-03': ["Abhishek Vishal", "Zolo Rohith"],
-  'BMD-04': ["Fathah Shaikna Lebbai", "Ismail Mohamed Noohu"],
+  'BMD-04': ["Fathah Shaikna Lebbai", "Mohideen Thamby"],
   'BMD-05': ["Prabhakaran Kumarapandiyan", "Bhuvaneshwaran Krishnan"],
   'BMD-06': ["Daniel Raj Kalaimani", "Mukundhan Thangaraj"],
   'BMD-07': ["Sharath Baskar", "Kamesh Sivakumar"],
@@ -121,18 +131,19 @@ export const TEAMS = {
   'IXD-06': ["Girither Sakthi", "Pooja Elumalai"],
   'IXD-07': ["Sarvesh S Mahalingam", "Jayalakshmi Kasinathan"],
   'IXD-08': ["Praveen Kumar Ethiendran", "Roshini Sathish"],
-  'IXD-10': ["Shanthi Narasimharao", "Sidharth Agarwal"],
-  'IXD-11': ["Gowri Arjunan", "Prakash Srinivasan"],
-  'IXD-12': ["Princy Jessica", "Mahibalakrishna Aswin"],
-  'IXD-13': ["Koushika Thangavelu", "Jebastin Irudhaya"],
-  'IXD-14': ["Purusothaman Sathyendran", "Ansuha Chowdary Nithyananda"],
-  'IXD-15': ["Vidhya Parthasarathy", "Saravanan Sundarababu"],
-  'IXD-16': ["Madesh Velmurugan", "Ashrita Sathish"],
-  'IXD-17': ["Biswaranjan Behera", "Aneesha Alex"],
+  'IXD-09': ["Shanthi Narasimharao", "Sidharth Agarwal"],
+  'IXD-10': ["Gowri Arjunan", "Prakash Srinivasan"],
+  'IXD-11': ["Princy Jessica", "Mahibalakrishna Aswin"],
+  'IXD-12': ["Koushika Thangavelu", "Jebastin Irudhaya"],
+  'IXD-13': ["Purusothaman Sathyendran", "Ansuha Chowdary Nithyananda"],
+  'IXD-14': ["Vidhya Parthasarathy", "Saravanan Sundarababu"],
+  'IXD-15': ["Madesh Velmurugan", "Ashrita Sathish"],
+  'IXD-16': ["Biswaranjan Behera", "Aneesha Alex"],
   'BWD-01': ["Kalai", "Oviya"],
   'BWD-02': ["Gowri Arjunan", "Shanthi Narasimharao"],
   'BWD-03': ["Prathiba Ramesh Kumar", "Diya Ravishankar"],
   'BWD-04': ["Sangeetha PK", "Lakshmi Chaganti"],
+  'BWD-05': ["Nithila Rajesh", "Navyaa Dhivakar"],
 };
 
 // Different spellings of the same person across categories (lower case), so the

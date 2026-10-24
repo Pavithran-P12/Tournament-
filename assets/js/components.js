@@ -1,6 +1,6 @@
-import { esc, fmtTime, matchHref, stageLabel, statusPill, teamLabel } from './ui.js?v=20261022w';
-import { category } from './engine.js?v=20261022w';
-import { gameScores } from './scoring.js?v=20261022w';
+import { esc, fmtTime, matchHref, stageLabel, statusPill, teamLabel } from './ui.js?v=20261024l';
+import { category } from './engine.js?v=20261024l';
+import { gameScores } from './scoring.js?v=20261024l';
 
 /** Compact match card used on the home page and in the match center. */
 export function matchCard(st, { showCategory = true } = {}) {
@@ -36,12 +36,13 @@ export function matchCard(st, { showCategory = true } = {}) {
       <span class="court-ball" title="Court ${m.court}"><span class="sr-only">Court </span>${m.court}</span>
       <span class="mcard-info">
         ${showCategory ? `<span class="mcard-cat"><span class="lvl lvl-${cat.level.toLowerCase()}">${esc(cat.level)}</span>${esc(cat.name.replace(`${cat.level} `, '').replace(' Doubles', ''))}</span>` : ''}
-        <span class="mcard-stage">${league ? `${single ? '' : `<b class="g-chip" title="Group ${m.group}">${m.group}</b>`}Round ${m.round}` : esc(stageLabel(m))}</span>
+        <span class="mcard-stage">${league ? `${single ? '' : `<b class="g-chip" title="Group ${m.group}">${m.group}</b>`}${m.no ? `Match ${m.no}` : `Round ${m.round}`}` : esc(showCategory ? stageLabel(m) : m.label.replace('Quarter-final', 'QF').replace('Semi-final', 'SF'))}</span>
       </span>
       ${statusPill(st)}
     </div>
     ${row('A')}${row('B')}
     ${gamesLine(st)}
+    ${st.clash ? `<p class="mcard-games mcard-clash">A player is also in ${esc(category(st.clash.cat).short)} ${esc(st.clash.label.toLowerCase())}. Starts once they are free.</p>` : ''}
   </a>`;
 }
 

@@ -1,10 +1,11 @@
 // Badminton scoring rules with rally scoring and a golden point (no deuce).
 // League: single game to 15. At 14-14 the next rally wins the game.
-// Knockouts: best of 3 games to 21. At 20-20 the next rally wins the game.
+// Quarter-finals: single game to 21. Semi-finals and finals: best of 3 games to 21. At 20-20 the next rally wins the game.
 // Pure functions only: no DOM, no storage. Used by the pages and by tests/.
 
 export const FORMATS = {
   league: { key: 'league', label: 'League', target: 15, bestOf: 1 },
+  quarter: { key: 'quarter', label: 'Quarter-final', target: 21, bestOf: 1 },
   knockout: { key: 'knockout', label: 'Knockout', target: 21, bestOf: 3 },
 };
 

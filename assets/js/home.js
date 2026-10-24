@@ -1,7 +1,7 @@
-import { EVENT } from './tournament-data.js?v=20261022w';
-import { tournament, standings } from './engine.js?v=20261022w';
-import { mountDrawNotice, startLoop, markActiveNav, paintLiveCount, fmtTime, esc, matchHref } from './ui.js?v=20261022w';
-import { matchCard, emptyState } from './components.js?v=20261022w';
+import { EVENT } from './tournament-data.js?v=20261024l';
+import { tournament, standings } from './engine.js?v=20261024l';
+import { mountDrawNotice, startLoop, markActiveNav, paintLiveCount, fmtTime, esc, matchHref } from './ui.js?v=20261024l';
+import { matchCard, emptyState } from './components.js?v=20261024l';
 
 const $ = (s) => document.querySelector(s);
 const T = tournament();
@@ -14,10 +14,15 @@ const finalTimes = [...new Set(finals.map((m) => m.start))].map((start) => {
   const names = finals.filter((m) => m.start === start).map((m) => T.cats.find((c) => c.code === m.cat).short);
   return `${names.join(' and ')} at ${fmtTime(start)}`;
 });
+const range = (codes) => {
+  const ms = T.matches.filter((m) => m.stage === 'league' && codes.includes(m.cat));
+  return `${fmtTime(Math.min(...ms.map((m) => m.start)))} to ${fmtTime(Math.max(...ms.map((m) => m.end)))}`;
+};
 $('[data-timeline]').innerHTML = [
-  ['League matches', `${fmtTime(EVENT.dayStart)} to ${fmtTime(T.leagueEnd)}`, 'Every team plays 3 matches in its group.'],
-  ...(Number.isFinite(T.stageStarts.quarter) ? [['Quarter-finals', `From ${fmtTime(T.stageStarts.quarter)}`, "Beginner Men's."]] : []),
-  ['Semi-finals', `From ${fmtTime(T.stageStarts.semi)}`, "Men's and Mixed: group A winner v group C winner, group B winner v group D winner."],
+  ['Beginner league', range(['BMD', 'BWD']), "Beginner Men's and Beginner Women's group matches."],
+  ['Intermediate league', range(['IMD', 'IXD']), "Intermediate Men's and Intermediate Mixed group matches."],
+  ['Quarter-finals', `From ${fmtTime(T.stageStarts.quarter)}`, "Men's and Mixed: the top two of each group. A1 v B2, C1 v D2, B1 v A2, D1 v C2."],
+  ['Semi-finals', `From ${fmtTime(T.stageStarts.semi)}`, 'Winners of quarter-finals 1 and 2 meet, and winners of 3 and 4.'],
   ['Finals', `From ${fmtTime(T.stageStarts.final)}`, `${finalTimes.join('. ')}. Trophies for the winner and runner-up in each category.`],
 ].map(([t, when, what]) => `<li><span class="tl-when">${when}</span><strong>${t}</strong><span>${what}</span></li>`).join('');
 

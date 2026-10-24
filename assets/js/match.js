@@ -1,12 +1,12 @@
-import { EVENT } from './tournament-data.js?v=20261022w';
-import { tournament, category } from './engine.js?v=20261022w';
-import { describeFormat, replay, gameScores } from './scoring.js?v=20261022w';
+import { EVENT } from './tournament-data.js?v=20261024l';
+import { tournament, category } from './engine.js?v=20261024l';
+import { describeFormat, replay, gameScores } from './scoring.js?v=20261024l';
 import {
   mountDrawNotice, startLoop, markActiveNav, paintLiveCount, fmtTime, esc,
   stageLabel, statusPill, teamLabel, recordFor, saveLocalScore, deleteScore,
   isScorer, checkPasskey, lockScorer, downloadResults, pendingChanges, publishedInfo,
-} from './ui.js?v=20261022w';
-import { openShare } from './share.js?v=20261022w';
+} from './ui.js?v=20261024l';
+import { openShare } from './share.js?v=20261024l';
 
 const $ = (s) => document.querySelector(s);
 const T = tournament();
@@ -225,7 +225,7 @@ function init() {
     };
     const team = (side) => `<span class="dt-team dt-team-${side.toLowerCase()}">${fromGroup(side)}${esc(teamLabel(st, side, { full: true }))}${won(side) ? '<span class="w-badge">W</span>' : ''}</span>`;
     const stage = m.stage === 'league'
-      ? `<span class="stage-chip group-${m.group.toLowerCase()}"><b>${m.group}</b> Group ${m.group}, round ${m.round}</span>`
+      ? `<span class="stage-chip group-${m.group.toLowerCase()}"><b>${m.group}</b> Group ${m.group}, ${m.no ? `match ${m.no}` : `round ${m.round}`}</span>`
       : `<span class="stage-chip stage-ko">${esc(stageLabel(m))}</span>`;
     const rows = [
       ['Team 1', team('A')],
