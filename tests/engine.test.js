@@ -124,11 +124,11 @@ test("league matches carry the organizer's match numbers", () => {
   assert.deepEqual([no('BWD', 15).a, no('BWD', 15).b], ['BWD-04', 'BWD-05']);
 });
 
-test('quarter-finals are one game to 21, semi-finals and finals best of 3', () => {
+test('knockouts are one game: quarter-finals to 15, semi-finals and finals to 21', () => {
   const T = tournament();
   for (const m of T.matches.filter((x) => x.stage !== 'league')) {
-    assert.equal(m.format.target, 21);
-    assert.equal(m.format.bestOf, m.stage === 'quarter' ? 1 : 3, m.id);
+    assert.equal(m.format.target, m.stage === 'quarter' ? 15 : 21, m.id);
+    assert.equal(m.format.bestOf, 1, m.id);
   }
   assert.equal(T.matches.filter((m) => m.stage === 'quarter').length, 12);
 });

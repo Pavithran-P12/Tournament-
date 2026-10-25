@@ -29,8 +29,8 @@ export const EVENT = {
   calledWithin: 5, // minutes after being called before a walkover may be given
   strictOrder: false, // true: a match never starts before any lower number in its category (leaves courts idle); false: in order within each pool
   timesTentative: true, // shows "times are tentative" on the schedule
-  quarterSlot: 16, // minutes per quarter-final (single game to 21, plus changeover)
-  knockoutSlot: 32, // minutes per semi-final or final (best of 3 games to 21, plus changeover)
+  quarterSlot: 16, // minutes per quarter-final (single game to 15, plus changeover)
+  knockoutSlot: 32, // minutes per semi-final or final (single game to 21, plus changeover)
   knockoutRest: 0, // extra minutes between a team's knockout matches
   knockoutWait: 0, // minutes a knockout match may be held back to avoid a player needed on two courts
   firstServer: 'A',
@@ -45,7 +45,7 @@ export const EVENT = {
     'Match start: matches start strictly on time. Players must be ready when called.',
     'Pool stage: league format within each pool, each match played to 15 points (rally scoring, golden point at 14–14).',
     'Knockout qualification: the top 2 teams from each pool qualify for the knockout round, as per the published fixture format.',
-    'Semi-finals and finals: played to 21 points (golden point at 20–20). Quarter-finals are one game to 21.',
+    'Knockouts are one game each: quarter-finals to 15 (golden point at 14–14), semi-finals and finals to 21 (golden point at 20–20).',
     'Late arrival or no-show: teams that fail to report when called may forfeit the match. If a team does not arrive within 5 minutes of being called, a walkover may be awarded to the opposing team.',
     "Umpire's decision: the umpire's decision on on-court calls is final.",
     'Beginner: players with little or no tournament experience. Intermediate: players with tournament experience who have never won or been runner-up in a tournament. Open, advanced, district, state or national-level players are not eligible.',

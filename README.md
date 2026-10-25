@@ -45,11 +45,11 @@ The schedule is built automatically on 5 courts (14-minute league slots, 35-minu
 ## Cache versions
 
 Every CSS/JS link carries `?v=<version>` so phones never mix old and new files. After changing any CSS or JS, bump it everywhere:
-`sed -i 's/?v=20261025f/?v=NEWVERSION/g' *.html assets/js/*.js`
+`sed -i 's/?v=20261025h/?v=NEWVERSION/g' *.html assets/js/*.js`
 
 ## Format rules in the code
 
-- League: single game to 15. Quarter-finals: single game to 21. Semi-finals and finals: best of 3 games to 21. Rally scoring with a golden point, no deuce: at 14–14 (league) or 20–20 (knockouts) the next rally wins the game. (`assets/js/scoring.js`)
+- League: single game to 15. Quarter-finals: single game to 15. Semi-finals and finals: single game to 21. (Best of 3 is still supported: set `bestOf: 3`.) Rally scoring with a golden point, no deuce: at 14–14 (league and quarter-finals) or 20–20 (semi-finals and finals) the next rally wins the game. (`assets/js/scoring.js`)
 - Time windows: each category has a `startAt` time (beginners from 9:00, intermediate from 10:45, which keeps at least `minCourts` courts once started); knockouts start at `knockoutStart` (2 PM) or `knockoutBreak` minutes after the league if it runs later. Times are tentative (`timesTentative` shows a notice). League slots are `leagueSlot` minutes, quarter-finals `quarterSlot`, semi-finals and finals `knockoutSlot`.
 - Group ranking: matches won, head-to-head (two-way ties), point difference, points scored, then the organizer decides. The top two of every group go through.
 - All four categories follow the organizer's fixture sheets (24 Oct): full round robin, entered as `pairings` in sheet order, with the sheet's match numbers (`numbered: true`, shown as "Match 23"). Other groups play a full round robin. No third-place matches.

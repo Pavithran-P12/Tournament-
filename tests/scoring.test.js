@@ -4,7 +4,7 @@ import assert from 'node:assert/strict';
 import { FORMATS, gameWinner, isValidScore, replay, summarize, applyEvent, describeFormat, gameScores } from '../assets/js/scoring.js';
 
 const L = FORMATS.league; // single game to 15, golden point
-const K = FORMATS.knockout; // best of 3 to 21, golden point
+const K = { key: 'bo3', label: 'Best of 3', target: 21, bestOf: 3 }; // best-of-3 logic stays supported
 const pts = (side, n) => Array(n).fill(side);
 
 test('league: first to 15 wins, golden point at 14-14', () => {
@@ -25,6 +25,7 @@ test('knockout game: first to 21, golden point at 20-20', () => {
 test('describes the formats', () => {
   assert.equal(describeFormat(L), 'Single game to 15, golden point at 14–14');
   assert.equal(describeFormat(K), 'Best of 3 games to 21, golden point at 20–20');
+  assert.equal(describeFormat(FORMATS.knockout), 'Single game to 21, golden point at 20–20');
 });
 
 test('score validation', () => {
@@ -123,4 +124,12 @@ test('duplicate taps with the same event id are applied once', () => {
   const second = applyEvent(events, tap, L, seen);
   assert.equal(second.applied, false);
   assert.equal(replay(second.events, L).b, 1);
+});
+
+test('quarter-final: first to 15, golden point at 14-14 (a 15-14 score is a finished match)', () => {
+  const Q = FORMATS.quarter;
+  assert.equal(describeFormat(Q), 'Single game to 15, golden point at 14–14');
+  const s = summarize([...'ABABABBAABABAABBBABABABBAABAB'], Q);
+  assert.equal(s.winner, 'B');
+  assert.deepEqual([s.a, s.b], [14, 15]);
 });

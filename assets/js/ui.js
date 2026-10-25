@@ -1,8 +1,8 @@
 // Shared page helpers: results data, scorer access, formatting and the page refresh loop.
 
-import { EVENT } from './tournament-data.js?v=20261025f';
-import { tournament, snapshot, standings } from './engine.js?v=20261025f';
-import { replay } from './scoring.js?v=20261025f';
+import { EVENT } from './tournament-data.js?v=20261025h';
+import { tournament, snapshot, standings } from './engine.js?v=20261025h';
+import { replay, summarize } from './scoring.js?v=20261025h';
 
 /* ---------- storage (best effort; the pages work without it) ---------- */
 function load(store, key, fallback) {
@@ -218,7 +218,15 @@ function overrides() {
     try {
       out[id] = { sides: replay(rec.events, m.format).rallies, confirmed: !!rec.confirmed };
     } catch {
-      /* ignore a corrupt record */
+      // Points after the end of the match (e.g. a phone still on an older page): keep the match up to its winning point.
+      const sides = [];
+      for (const ev of rec.events) {
+        if (ev.type === 'point' && (ev.side === 'A' || ev.side === 'B')) sides.push(ev.side);
+        else if (ev.type === 'undo') sides.pop();
+      }
+      let cut = sides.length;
+      for (let i = 1; i <= sides.length; i++) if (summarize(sides.slice(0, i), m.format).winner) { cut = i; break; }
+      out[id] = { sides: sides.slice(0, cut), confirmed: !!rec.confirmed };
     }
   }
   return out;
