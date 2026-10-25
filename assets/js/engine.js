@@ -2,8 +2,8 @@
 // Match results come from the scorers (published results file plus this device). The seeded
 // simulation is only used by tests and previews (snapshot(..., { simulate: true })).
 
-import { EVENT, CATEGORIES, TEAMS, SAME_PERSON, rng } from './tournament-data.js?v=20261025h';
-import { FORMATS, summarize } from './scoring.js?v=20261025h';
+import { EVENT, CATEGORIES, TEAMS, SAME_PERSON, KO_OVERRIDES, rng } from './tournament-data.js?v=20261025i';
+import { FORMATS, summarize } from './scoring.js?v=20261025i';
 
 /** Round-robin rounds (circle method). Odd group sizes get a bye each round. */
 export function roundRobin(n) {
@@ -309,8 +309,9 @@ export function snapshot(t, overrides = {}, { simulate = false } = {}) {
   };
 
   for (const m of T.matches) {
-    const a = m.stage === 'league' ? T.teamIndex[m.a] : resolve(m, m.from[0]);
-    const b = m.stage === 'league' ? T.teamIndex[m.b] : resolve(m, m.from[1]);
+    const fixed = KO_OVERRIDES[m.id]; // line-up set by hand on the day
+    const a = m.stage === 'league' ? T.teamIndex[m.a] : fixed ? T.teamIndex[fixed[0]] : resolve(m, m.from[0]);
+    const b = m.stage === 'league' ? T.teamIndex[m.b] : fixed ? T.teamIndex[fixed[1]] : resolve(m, m.from[1]);
     const st = { match: m, a, b, status: 'upcoming', score: summarize([], m.format, EVENT.firstServer) };
     const ov = overrides[m.id];
     if (ov && a && b) {

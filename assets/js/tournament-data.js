@@ -168,6 +168,13 @@ export const TEAMS = {
 
 // Different spellings of the same person across categories (lower case), so the
 // schedule never puts one person on two courts at once.
+// Knockout line-ups set by hand on the day, used instead of the bracket (match id -> [team A, team B]).
+// 25 Oct: the Beginner Men's semi-finals were played as BMD-08 v BMD-12 and BMD-23 v BMD-24.
+export const KO_OVERRIDES = {
+  'BMD-SF1': ['BMD-08', 'BMD-12'],
+  'BMD-SF2': ['BMD-23', 'BMD-24'],
+};
+
 export const SAME_PERSON = {
   'pavan kumar': 'pavan',
   'sathishkumar krishnamoorthy': 'sathish krishnamoorthy',

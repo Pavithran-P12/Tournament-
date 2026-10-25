@@ -149,8 +149,10 @@ test('quarter-finals pair group winners with runners-up, and the bracket follows
     assert.deepEqual(pair('QF2'), [pos('C', 1), pos('D', 2)]);
     assert.deepEqual(pair('QF3'), [pos('B', 1), pos('A', 2)]);
     assert.deepEqual(pair('QF4'), [pos('D', 1), pos('C', 2)]);
-    assert.deepEqual(pair('SF1'), [s[`${code}-QF1`].winnerTeam.id, s[`${code}-QF2`].winnerTeam.id]);
-    assert.deepEqual(pair('SF2'), [s[`${code}-QF3`].winnerTeam.id, s[`${code}-QF4`].winnerTeam.id]);
+    if (code !== 'BMD') { // Beginner Men's semi-finals were set by hand (KO_OVERRIDES)
+      assert.deepEqual(pair('SF1'), [s[`${code}-QF1`].winnerTeam.id, s[`${code}-QF2`].winnerTeam.id]);
+      assert.deepEqual(pair('SF2'), [s[`${code}-QF3`].winnerTeam.id, s[`${code}-QF4`].winnerTeam.id]);
+    }
     assert.deepEqual(pair('F'), [s[`${code}-SF1`].winnerTeam.id, s[`${code}-SF2`].winnerTeam.id]);
   }
 });
@@ -187,7 +189,7 @@ test('without simulation, unscored matches stay upcoming and knockouts wait for 
   assert.equal(s[m.id].status, 'completed');
   assert.equal(s[m.id].confirmed, true);
   assert.ok(Object.values(s).filter((x) => x.match.id !== m.id && x.match.stage === 'league').every((x) => x.status === 'upcoming'));
-  assert.ok(Object.values(s).filter((x) => x.match.stage !== 'league').every((x) => x.status === 'waiting'));
+  assert.ok(Object.values(s).filter((x) => x.match.stage !== 'league' && !['BMD-SF1', 'BMD-SF2'].includes(x.match.id)).every((x) => x.status === 'waiting'));
 });
 
 test('short names keep the first name and turn the rest into initials', async () => {
@@ -206,4 +208,11 @@ test('every player name is in proper case', () => {
   for (const players of Object.values(TEAMS)) {
     for (const p of players) for (const w of p.split(' ')) assert.ok(/^[A-Z]/.test(w), `${p}`);
   }
+});
+
+test("Beginner Men's semi-finals use the line-ups set on the day", () => {
+  const s = all();
+  assert.deepEqual([s['BMD-SF1'].a.id, s['BMD-SF1'].b.id], ['BMD-08', 'BMD-12']);
+  assert.deepEqual([s['BMD-SF2'].a.id, s['BMD-SF2'].b.id], ['BMD-23', 'BMD-24']);
+  assert.deepEqual([s['BMD-F'].a.id, s['BMD-F'].b.id], [s['BMD-SF1'].winnerTeam.id, s['BMD-SF2'].winnerTeam.id]);
 });
