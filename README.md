@@ -1,5 +1,7 @@
 # ThirdSpace Play Badminton Tournament
 
+**See [FEATURES.md](FEATURES.md)** for the full list of features, how to reuse this site for another tournament, and future ideas.
+
 Website for the ThirdSpace Play Badminton Tournament (Sunday 25 October 2026, Rapid Sports Academy, Perungudi, Chennai).
 
 **Current phase: static site.** Scores are entered by scorers with a passkey and published through a JSON file. The real entry list and the random draw (done 22 October 2026) are in `assets/js/tournament-data.js`.
@@ -17,7 +19,7 @@ Match codes: `<category>-<group>-<number>` for league matches (for example `BWD-
 
 ## Scoring and live results
 
-**The tournament is over (25 Oct 2026): `data/results.json` is the source of truth.** It is the final export of every result. Live scores and scoring are switched off (`LIVE_SCORES = false` in `assets/js/ui.js`); the Supabase table `tsp_scores` is kept untouched as a backup. The rest of this section describes how live scoring worked on the day.
+**The tournament is over (25 Oct 2026): `data/results.json` is the source of truth.** It is the final export of every result. Live scores and scoring are switched off (`LIVE_SCORES = false` in `assets/js/ui.js`); the Supabase table `tsp_scores` is kept untouched as a backup, and public execute on the scoring functions has been revoked (migration `tsp_close_scoring`; re-grant to `anon` to reopen). The rest of this section describes how live scoring worked on the day.
 
 During the event scores were live, stored in a Supabase table (`tsp_scores`, one row per match holding its rally sequence such as `AABAB`).
 
