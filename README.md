@@ -8,15 +8,18 @@ Website for the ThirdSpace Play Badminton Tournament (Sunday 25 October 2026, Ra
 
 | Page | File | What it shows |
 |---|---|---|
-| Tournament home | `index.html` | Event details, matches on court now, coming up, categories, format, what's included, rules, venue |
-| Match center | `matches.html` | Schedule (filter by category, status, court, round), group tables, knockout bracket |
+| Results (home) | `index.html` | Champions with runners-up and semi-finalists, the day in numbers, every team's journey with search (`assets/js/results.js`) |
+| Schedule and rules | `schedule.html` | Event details, day plan, categories, format, what's included, rules, venue (`assets/js/schedule.js`) |
+| Match center | `matches.html` | Group tables, schedule, knockout bracket. `matches.html?journey=BMD-24` opens that team's journey |
 | Match | `match.html#BMD-A-01` | Court scoreboard, serving side, rally-by-rally score sheet, scorer controls (passkey) |
 
 Match codes: `<category>-<group>-<number>` for league matches (for example `BWD-C-03`), `<category>-SF1`, `<category>-SF2` and `<category>-F` for the knockout.
 
 ## Scoring and live results
 
-Scores are live. They are stored in a Supabase table (`tsp_scores`, one row per match holding its rally sequence such as `AABAB`).
+**The tournament is over (25 Oct 2026): `data/results.json` is the source of truth.** It is the final export of every result. Live scores and scoring are switched off (`LIVE_SCORES = false` in `assets/js/ui.js`); the Supabase table `tsp_scores` is kept untouched as a backup. The rest of this section describes how live scoring worked on the day.
+
+During the event scores were live, stored in a Supabase table (`tsp_scores`, one row per match holding its rally sequence such as `AABAB`).
 
 1. On a match page, tap **Score this match** and enter the scorer passkey (ask the organizer). Scoring stays unlocked until the browser tab is closed or **Lock** is tapped.
 2. Tap the team that won each rally. Every tap is sent straight away, and every open page picks it up within about 5 seconds. **Undo last point**, **Confirm result**, the court picker and **Delete this match's scores** sync the same way.
@@ -36,7 +39,7 @@ Several scorers can score different matches on different phones at the same time
 | Beginner Men's | 24 | 4 groups of 6, each team plays 3 randomly drawn opponents | Group winners: semi-finals (A v C, B v D), final |
 | Intermediate Men's | 18 | 6, 4, 4, 4 (group A: 3 randomly drawn opponents each) | Group winners: semi-finals (A v C, B v D), final |
 | Intermediate Mixed | 16 | 4 groups of 4 | Group winners: semi-finals (A v C, B v D), final |
-| Beginner Women's | 4 | 1 group of 4 | 1st v 2nd in the final |
+| Beginner Women's | 6 | 1 group of 6 | Semi-finals 1st v 3rd and 2nd v 4th, then the final |
 
 Mixed entry 9 was a duplicate of entry 6 and was removed. Names are spelled as given by the organizer.
 
@@ -45,7 +48,7 @@ The schedule is built automatically on 5 courts (14-minute league slots, 35-minu
 ## Cache versions
 
 Every CSS/JS link carries `?v=<version>` so phones never mix old and new files. After changing any CSS or JS, bump it everywhere:
-`sed -i 's/?v=20261025i/?v=NEWVERSION/g' *.html assets/js/*.js`
+`sed -i 's/?v=20261025o/?v=NEWVERSION/g' *.html assets/js/*.js`
 
 ## Format rules in the code
 
@@ -53,7 +56,7 @@ Every CSS/JS link carries `?v=<version>` so phones never mix old and new files. 
 - Time windows: each category has a `startAt` time (beginners from 9:00, intermediate from 10:45, which keeps at least `minCourts` courts once started); knockouts start at `knockoutStart` (2 PM) or `knockoutBreak` minutes after the league if it runs later. Times are tentative (`timesTentative` shows a notice). League slots are `leagueSlot` minutes, quarter-finals `quarterSlot`, semi-finals and finals `knockoutSlot`.
 - Group ranking: matches won, head-to-head (two-way ties), point difference, points scored, then the organizer decides. The top two of every group go through.
 - All four categories follow the organizer's fixture sheets (24 Oct): full round robin, entered as `pairings` in sheet order, with the sheet's match numbers (`numbered: true`, shown as "Match 23"). Other groups play a full round robin. No third-place matches.
-- Quarter-finals: A1 v B2, C1 v D2, B1 v A2, D1 v C2; semi-finals QF1 v QF2 winners and QF3 v QF4 winners. Beginner Women's: 1st v 2nd in the final.
+- Quarter-finals: A1 v B2, C1 v D2, B1 v A2, D1 v C2; semi-finals QF1 v QF2 winners and QF3 v QF4 winners. Beginner Women's: semi-finals 1st v 3rd and 2nd v 4th (format `sf4`), then the final.
 - The schedule is built by `tournament()` in `engine.js` (seeded search, same data gives the same schedule). Ten players are entered in two categories; if two of their knockout matches overlap, the later one is flagged on its match card and starts once they are free.
 
 ## Anonymous feedback

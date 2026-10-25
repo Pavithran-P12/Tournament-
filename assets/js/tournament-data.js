@@ -57,6 +57,7 @@ export const EVENT = {
 // Knockout formats:
 //   qf     top two of 4 groups -> quarter-finals (A1 v B2, C1 v D2, B1 v A2, D1 v C2) -> semi-finals -> final
 //   final2 single group -> 1st v 2nd in the final
+//   sf4    single group -> semi-finals 1st v 3rd and 2nd v 4th -> final
 // numbered: league matches carry the organizer's match numbers (in pairings order).
 // startAt: the earliest time (minutes from midnight) the category's league matches can start. Earlier categories get
 // courts first; minCourts guarantees a category that many courts once it has started.
@@ -70,7 +71,7 @@ export const CATEGORIES = [
       C: [[['BMD-13', 'BMD-18'], ['BMD-14', 'BMD-17'], ['BMD-15', 'BMD-16']], [['BMD-13', 'BMD-17'], ['BMD-18', 'BMD-16'], ['BMD-14', 'BMD-15']], [['BMD-13', 'BMD-16'], ['BMD-17', 'BMD-15'], ['BMD-18', 'BMD-14']], [['BMD-13', 'BMD-15'], ['BMD-16', 'BMD-14'], ['BMD-17', 'BMD-18']], [['BMD-13', 'BMD-14'], ['BMD-15', 'BMD-18'], ['BMD-16', 'BMD-17']]],
       D: [[['BMD-19', 'BMD-24'], ['BMD-20', 'BMD-23'], ['BMD-21', 'BMD-22']], [['BMD-19', 'BMD-23'], ['BMD-24', 'BMD-22'], ['BMD-20', 'BMD-21']], [['BMD-19', 'BMD-22'], ['BMD-23', 'BMD-21'], ['BMD-24', 'BMD-20']], [['BMD-19', 'BMD-21'], ['BMD-22', 'BMD-20'], ['BMD-23', 'BMD-24']], [['BMD-19', 'BMD-20'], ['BMD-21', 'BMD-24'], ['BMD-22', 'BMD-23']]],
     } },
-  { code: 'BWD', name: "Beginner Women's Doubles", short: "Beginner Women's", level: 'Beginner', format: 'final2', startAt: 9 * 60, numbered: true,
+  { code: 'BWD', name: "Beginner Women's Doubles", short: "Beginner Women's", level: 'Beginner', format: 'sf4', startAt: 9 * 60, numbered: true,
     groups: { A: ['BWD-01', 'BWD-02', 'BWD-03', 'BWD-04', 'BWD-05', 'BWD-06'] },
     // Organizer's fixture sheet (24 Oct, evening): 6 teams, full round robin, matches 1-15 in this order, 3 per round.
     pairings: {

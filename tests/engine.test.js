@@ -157,10 +157,13 @@ test('quarter-finals pair group winners with runners-up, and the bracket follows
   }
 });
 
-test("Beginner Women's final is 1st v 2nd of the single group", () => {
+test("Beginner Women's semi-finals are 1st v 3rd and 2nd v 4th, then the final", () => {
   const s = all();
   const t = standings('BWD', 'A', s);
-  assert.deepEqual([s['BWD-F'].a.id, s['BWD-F'].b.id], [t.rows[0].team.id, t.rows[1].team.id]);
+  const id = (r) => t.rows[r - 1].team.id;
+  assert.deepEqual([s['BWD-SF1'].a.id, s['BWD-SF1'].b.id], [id(1), id(3)]);
+  assert.deepEqual([s['BWD-SF2'].a.id, s['BWD-SF2'].b.id], [id(2), id(4)]);
+  assert.deepEqual([s['BWD-F'].a.id, s['BWD-F'].b.id], [s['BWD-SF1'].winnerTeam.id, s['BWD-SF2'].winnerTeam.id]);
 });
 
 test('group tables add up, including groups of 5 and 6', () => {

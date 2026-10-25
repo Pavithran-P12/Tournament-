@@ -1,12 +1,12 @@
-import { EVENT } from './tournament-data.js?v=20261025i';
-import { tournament, category } from './engine.js?v=20261025i';
-import { describeFormat, replay, gameScores } from './scoring.js?v=20261025i';
+import { EVENT } from './tournament-data.js?v=20261025o';
+import { tournament, category } from './engine.js?v=20261025o';
+import { describeFormat, replay, gameScores } from './scoring.js?v=20261025o';
 import {
   mountDrawNotice, startLoop, markActiveNav, paintLiveCount, fmtTime, esc,
   stageLabel, statusPill, teamLabel, recordFor, saveLocalScore, deleteScore,
-  isScorer, checkPasskey, lockScorer, downloadResults, pendingChanges, liveInfo, sessionFor, sessionSpan, reportBy,
-} from './ui.js?v=20261025i';
-import { openShare } from './share.js?v=20261025i';
+  isScorer, scoringOpen, checkPasskey, lockScorer, downloadResults, pendingChanges, liveInfo, sessionFor, sessionSpan, reportBy,
+} from './ui.js?v=20261025o';
+import { openShare } from './share.js?v=20261025o';
 
 const $ = (s) => document.querySelector(s);
 const T = tournament();
@@ -254,7 +254,7 @@ function init() {
     const canScore = !!(st.a && st.b);
     if (scoring && !isScorer()) scoring = false;
     const toggle = $('[data-scorer-toggle]');
-    toggle.hidden = scoring || askingPasskey || !canScore;
+    toggle.hidden = scoring || askingPasskey || !canScore || !scoringOpen();
     toggle.textContent = st.status === 'completed' ? 'Correct this result' : 'Score this match';
     $('[data-passkey]').hidden = !askingPasskey;
     const panel = $('[data-scorer]');

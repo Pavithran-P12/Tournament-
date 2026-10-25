@@ -2,8 +2,8 @@
 // Match results come from the scorers (published results file plus this device). The seeded
 // simulation is only used by tests and previews (snapshot(..., { simulate: true })).
 
-import { EVENT, CATEGORIES, TEAMS, SAME_PERSON, KO_OVERRIDES, rng } from './tournament-data.js?v=20261025i';
-import { FORMATS, summarize } from './scoring.js?v=20261025i';
+import { EVENT, CATEGORIES, TEAMS, SAME_PERSON, KO_OVERRIDES, rng } from './tournament-data.js?v=20261025o';
+import { FORMATS, summarize } from './scoring.js?v=20261025o';
 
 /** Round-robin rounds (circle method). Odd group sizes get a bye each round. */
 export function roundRobin(n) {
@@ -56,12 +56,20 @@ const KO = {
   final2: [
     { id: 'F', stage: 'final', label: 'Final', from: [{ g: 'A', r: 1 }, { g: 'A', r: 2 }] },
   ],
+  // single group, top four: 1st v 3rd and 2nd v 4th, winners in the final
+  sf4: [
+    { id: 'SF1', stage: 'semi', label: 'Semi-final 1', from: [{ g: 'A', r: 1 }, { g: 'A', r: 3 }] },
+    { id: 'SF2', stage: 'semi', label: 'Semi-final 2', from: [{ g: 'A', r: 2 }, { g: 'A', r: 4 }] },
+    { id: 'F', stage: 'final', label: 'Final', from: [{ w: 'SF1' }, { w: 'SF2' }] },
+  ],
 };
+/** How many teams of each group go through. */
+export const placesFor = (format) => (format === 'sf4' ? 4 : 2);
 const STAGE_ORDER = { quarter: 0, semi: 1, final: 2 };
 
 const ORDINAL = ['', '1st', '2nd', '3rd', '4th', '5th', '6th'];
 export function refLabel(ref) {
-  if (ref.g) return ref.r === 1 ? `Group ${ref.g} winner` : `Group ${ref.g} runner-up`;
+  if (ref.g) return ref.r === 1 ? `Group ${ref.g} winner` : ref.r === 2 ? `Group ${ref.g} runner-up` : `Group ${ref.g} ${ORDINAL[ref.r]}`;
   if (ref.q) return ref.q <= 6 ? `${ORDINAL[ref.q]} best group winner` : `${ref.q === 7 ? 'Best' : '2nd best'} runner-up`;
   const n = ref.w.slice(2);
   return ref.w.startsWith('QF') ? `Winner of quarter-final ${n}` : `Winner of semi-final ${n}`;
@@ -398,7 +406,7 @@ export function standings(catCode, letter, states) {
     r.tiedWithNext = !!next && next.won === r.won && next.pd === r.pd && next.pf === r.pf && rows.filter((q) => q.won === r.won).length > 2;
   });
   const complete = done === groupMatches.length;
-  const places = 2; // the top two of every group go through
+  const places = placesFor(CATEGORIES.find((c) => c.code === catCode)?.format); // teams that go through
   return {
     letter, rows, complete, played: done, total: groupMatches.length,
     needsDecision: complete && rows.slice(0, places).some((r) => r.tiedWithNext),

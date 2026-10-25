@@ -1,8 +1,8 @@
 // Shared page helpers: results data, scorer access, formatting and the page refresh loop.
 
-import { EVENT } from './tournament-data.js?v=20261025i';
-import { tournament, snapshot, standings } from './engine.js?v=20261025i';
-import { replay, summarize } from './scoring.js?v=20261025i';
+import { EVENT } from './tournament-data.js?v=20261025o';
+import { tournament, snapshot, standings, placesFor } from './engine.js?v=20261025o';
+import { replay, summarize } from './scoring.js?v=20261025o';
 
 /* ---------- storage (best effort; the pages work without it) ---------- */
 function load(store, key, fallback) {
@@ -45,6 +45,9 @@ const SB_URL = 'https://wxlpbefrbxxbosjfeudk.supabase.co/rest/v1';
 const SB_KEY = 'sb_publishable_N9SO6zdvGjgfggBDqfzjtA_es8fc9eU';
 const SB_HEADERS = { apikey: SB_KEY, 'Content-Type': 'application/json' };
 const LIVE_EVERY = 5000; // ms between checks for new scores
+// The tournament is over: data/results.json (final export, 25 Oct 2026) is the source of truth.
+// Set to true to read and write live scores through Supabase again.
+const LIVE_SCORES = false;
 
 const LOCAL_KEY = 'tsp-scores-v1';
 let published = { updated: null, matches: {} };
@@ -74,6 +77,7 @@ const sidesToEvents = (sides) => [...sides].map((side, i) => ({ id: `r${i + 1}`,
 
 /** New or changed live scores since the last check (with a small overlap so nothing is missed). */
 export async function loadRemote() {
+  if (!LIVE_SCORES) return;
   try {
     let q = `${SB_URL}/tsp_scores?select=match_id,sides,confirmed,court,deleted,updated_at&order=updated_at.asc`;
     if (remoteSeen) q += `&updated_at=gte.${encodeURIComponent(new Date(Date.parse(remoteSeen) - 15000).toISOString())}`;
@@ -139,7 +143,7 @@ async function rpc(name, body) {
 }
 export async function pushPending() {
   const key = scorerKey();
-  if (pushing || !key) return;
+  if (!LIVE_SCORES || pushing || !key) return;
   pushing = true;
   try {
     const T = tournament();
@@ -245,6 +249,7 @@ export function currentStates() {
 const UNLOCK_KEY = 'tsp-scorer-key';
 
 export async function checkPasskey(input) {
+  if (!LIVE_SCORES) throw new Error('Scoring is closed: the tournament has finished and the final results are published.');
   let ok;
   try {
     ok = await rpc('tsp_check_passkey', { p_passkey: input });
@@ -261,7 +266,8 @@ const scorerKey = () => {
   const k = load(session(), UNLOCK_KEY, null);
   return typeof k === 'string' && k ? k : null;
 };
-export const isScorer = () => !!scorerKey();
+export const isScorer = () => LIVE_SCORES && !!scorerKey();
+export const scoringOpen = () => LIVE_SCORES;
 export function lockScorer() {
   try { sessionStorage.removeItem(UNLOCK_KEY); } catch { /* ignore */ }
 }
@@ -363,8 +369,9 @@ export function teamJourney(teamId, states) {
     else { standing = stage === 'final' ? 'In the final' : stage === 'semi' ? 'In the semi-finals' : 'In the quarter-finals'; tone = 'win'; }
   } else if (table.complete) {
     const place = ['', '1st', '2nd', '3rd', '4th', '5th', '6th'][rank];
-    standing = rank <= 2 ? (cat.format === 'final2' ? 'Through to the final' : 'Through to the knockouts') : Object.keys(cat.groups).length > 1 ? `Group ${team.group}, ${place} place` : `${place} place`;
-    tone = rank <= 2 ? 'win' : 'line';
+    const through = placesFor(cat.format);
+    standing = rank <= through ? (cat.format === 'final2' ? 'Through to the final' : cat.format === 'sf4' ? 'Through to the semi-finals' : 'Through to the knockouts') : Object.keys(cat.groups).length > 1 ? `Group ${team.group}, ${place} place` : `${place} place`;
+    tone = rank <= through ? 'win' : 'line';
   } else {
     standing = Object.keys(cat.groups).length > 1 ? `Group ${team.group}` : 'League stage';
   }
@@ -396,9 +403,11 @@ export function startLoop(render) {
     loadRemote().then(() => tick());
     pushPending();
   };
-  setInterval(poll, LIVE_EVERY);
-  document.addEventListener('visibilitychange', poll);
-  window.addEventListener('online', poll);
+  if (LIVE_SCORES) {
+    setInterval(poll, LIVE_EVERY);
+    document.addEventListener('visibilitychange', poll);
+    window.addEventListener('online', poll);
+  }
   setInterval(() => loadPublished().then(() => tick()), 300000); // fallback file, rarely changes
   window.addEventListener('storage', () => tick(true)); // scoring in another tab on this device
   return () => tick(true);
@@ -406,6 +415,7 @@ export function startLoop(render) {
 
 /** Shown until the real draw is entered in tournament-data.js. */
 export function mountDrawNotice() {
+  if (['after', 'evening'].includes(venueNow().phase)) return; // the day is over: reporting times no longer apply
   const text = !EVENT.drawPublished
     ? '<strong>Sample draw.</strong> The real fixtures are published here 24 hours before play.'
     : EVENT.timesTentative ? `<strong>Report ${EVENT.reportBefore} minutes before your category starts.</strong> Beginners ${reportBy('beginner')}, Intermediate ${reportBy('intermediate')}, knockouts ${reportBy('knockout')}.` : '';

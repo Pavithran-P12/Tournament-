@@ -1,8 +1,8 @@
-import { EVENT } from './tournament-data.js?v=20261025i';
-import { tournament, standings, category } from './engine.js?v=20261025i';
-import { mountDrawNotice, startLoop, markActiveNav, paintLiveCount, fmtTime, esc, matchHref, dayPlanHtml, sessionFor, sessionSpan, teamJourney, currentStates } from './ui.js?v=20261025i';
-import { openTeamShare } from './share.js?v=20261025i';
-import { matchCard, matchRow, emptyState } from './components.js?v=20261025i';
+import { EVENT } from './tournament-data.js?v=20261025o';
+import { tournament, standings, category, placesFor } from './engine.js?v=20261025o';
+import { mountDrawNotice, startLoop, markActiveNav, paintLiveCount, fmtTime, esc, matchHref, sessionFor, sessionSpan, teamJourney, currentStates } from './ui.js?v=20261025o';
+import { openTeamShare } from './share.js?v=20261025o';
+import { matchCard, matchRow, emptyState } from './components.js?v=20261025o';
 
 const $ = (s) => document.querySelector(s);
 const T = tournament();
@@ -26,7 +26,6 @@ function syncUrl() {
   history.replaceState(null, '', `${location.pathname}${p.toString() ? `?${p}` : ''}`);
 }
 
-$('[data-day-plan]').innerHTML = dayPlanHtml();
 
 /* ---------- controls ---------- */
 $('[data-cat-tabs]').innerHTML = [['all', 'All categories'], ...T.cats.map((c) => [c.code, c.short])]
@@ -152,6 +151,7 @@ document.addEventListener('click', (e) => {
 const FORMAT_NOTE = {
   qf: 'The top two of each group go through to the quarter-finals: A1 v B2, C1 v D2, B1 v A2, D1 v C2.',
   final2: 'The top two teams play the final.',
+  sf4: 'The top four play the semi-finals: 1st v 3rd and 2nd v 4th. The winners play the final.',
 };
 
 function groupsView(states) {
@@ -170,13 +170,14 @@ function groupsView(states) {
 
 function groupCard(c, letter, states) {
   const t = standings(c.code, letter, states);
-  const through = 2;
+  const through = placesFor(c.format);
   const matches = T.matches.filter((m) => m.cat === c.code && m.stage === 'league' && m.group === letter);
   let note = '';
   if (t.complete && t.needsDecision) note = '<p class="group-note warn">Level on the qualifying places. The organizer decides who goes through.</p>';
   else if (t.complete) {
     const w = esc(t.rows[0].team.name);
     if (c.format === 'final2') note = `<p class="group-note">${w} and ${esc(t.rows[1].team.name)} play the final.</p>`;
+    else if (c.format === 'sf4') note = '<p class="group-note">The top four go through to the semi-finals: 1st v 3rd and 2nd v 4th.</p>';
     else note = `<p class="group-note">${w} and ${esc(t.rows[1].team.name)} go through to the quarter-finals.</p>`;
   }
   const single = Object.keys(c.teamsByGroup).length === 1;
@@ -266,3 +267,11 @@ function update() {
 }
 paintControls();
 startLoop(render);
+
+// Opened from the results page: matches.html?journey=<team id> shows that team's journey straight away.
+const askedJourney = params.get('journey');
+if (askedJourney && T.teamIndex[askedJourney]) {
+  journeyId = askedJourney;
+  paintJourney();
+  journeyDialog.showModal();
+}
